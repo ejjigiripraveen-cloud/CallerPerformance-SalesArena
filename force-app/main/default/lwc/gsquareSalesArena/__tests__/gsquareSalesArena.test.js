@@ -220,6 +220,39 @@ describe("c-gsquare-sales-arena", () => {
     ).toBe("Karthik M");
   });
 
+  it("month count follows the latest refresh, not the highest value seen", async () => {
+    const el = mount();
+    getDashboard.emit(DATA);
+    await flush();
+    await flush();
+    const newMonth = {
+      ...DATA,
+      totals: { ...DATA.totals, booking: 0 },
+      mtdTotals: { ...DATA.mtdTotals, booking: 0 },
+      people: DATA.people.map((p) => ({
+        ...p,
+        metrics: { ...p.metrics, booking: 0 }
+      }))
+    };
+    getDashboard.emit(newMonth);
+    await flush();
+    bookingHandler({
+      data: {
+        payload: {
+          Opportunity_Id__c: "006M",
+          Caller_Id__c: "u1",
+          Caller_Name__c: "Priya R",
+          Zone__c: "Zone 1"
+        }
+      }
+    });
+    jest.advanceTimersByTime(1000);
+    await flush();
+    expect(
+      el.shadowRoot.querySelector("c-gsquare-arena-takeover").booking.countText
+    ).toBe("Booking 1 today in Zone 1, 1 this month");
+  });
+
   it("reloads the page on an expired session", async () => {
     mount();
     getDashboard.error({ message: "Session expired or invalid" }, 401);

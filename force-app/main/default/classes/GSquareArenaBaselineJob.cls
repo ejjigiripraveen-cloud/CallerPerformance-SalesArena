@@ -27,7 +27,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
   public static final String KIND_MTD = 'MTD';
 
   public void execute(SchedulableContext sc) {
-    computeFor(istToday());
+    runAsync(istToday());
   }
 
   public static String scheduleNightly() {
@@ -93,21 +93,69 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
 
   /* ----------------------------------------------------------------- run */
 
-  public static void computeFor(Date target) {
-    Map<Id, List<String>> scopesByUser = loadScopes();
-    Set<String> allScopes = new Set<String>();
-    for (List<String> scopes : scopesByUser.values())
-      allScopes.addAll(scopes);
-    Integer weekday = weekdayOf(target);
-    Map<String, GSquare_Arena_Baseline__c> rows = new Map<String, GSquare_Arena_Baseline__c>();
-
+  /** Ordered work units: [metricKey, KIND_HOURLY | KIND_MTD]. */
+  public static List<List<String>> steps() {
+    List<List<String>> out = new List<List<String>>();
     for (
       GSquareSalesArenaWrapper.MetricDef def : GSquareSalesArenaWrapper.getMetrics()
     ) {
       if (!BASELINE_METRICS.contains(def.key))
         continue;
-      Boolean isDateTime = isDateTimeField(def);
+      out.add(new List<String>{ def.key, KIND_HOURLY });
+      out.add(new List<String>{ def.key, KIND_MTD });
+    }
+    return out;
+  }
 
+  /** Production path: one Queueable per step, so each gets its own governor limits. */
+  public static Id runAsync(Date target) {
+    return System.enqueueJob(new Step(target, 0));
+  }
+
+  public class Step implements Queueable {
+    private Date target;
+    private Integer index;
+    public Step(Date target, Integer index) {
+      this.target = target;
+      this.index = index;
+    }
+    public void execute(QueueableContext qc) {
+      List<List<String>> all = steps();
+      if (index >= all.size())
+        return;
+      computeStep(target, all[index][0], all[index][1]);
+      // chained Queueables cannot be enqueued from a test
+      if (index + 1 < all.size() && !Test.isRunningTest()) {
+        System.enqueueJob(new Step(target, index + 1));
+      }
+    }
+  }
+
+  /** Synchronous run of every step (tests, small orgs). */
+  public static void computeFor(Date target) {
+    for (List<String> st : steps())
+      computeStep(target, st[0], st[1]);
+  }
+
+  public static void computeStep(Date target, String metricKey, String kind) {
+    GSquareSalesArenaWrapper.MetricDef def;
+    for (
+      GSquareSalesArenaWrapper.MetricDef d : GSquareSalesArenaWrapper.getMetrics()
+    ) {
+      if (d.key == metricKey)
+        def = d;
+    }
+    if (def == null)
+      return;
+    Map<Id, List<String>> scopesByUser = loadScopes();
+    Set<String> allScopes = new Set<String>();
+    for (List<String> scopes : scopesByUser.values())
+      allScopes.addAll(scopes);
+    Boolean isDateTime = isDateTimeField(def);
+    Map<String, GSquare_Arena_Baseline__c> rows = new Map<String, GSquare_Arena_Baseline__c>();
+
+    if (kind == KIND_HOURLY) {
+      Integer weekday = weekdayOf(target);
       // every scope gets rows, so a quiet zone reads "typical 0", not stale data
       Map<String, List<Decimal>> sums = new Map<String, List<Decimal>>();
       for (String scope : allScopes)
@@ -122,9 +170,8 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
         for (String scope : day.keySet()) {
           if (!sums.containsKey(scope))
             sums.put(scope, zeros());
-          for (Integer h = 0; h < 24; h++) {
+          for (Integer h = 0; h < 24; h++)
             sums.get(scope)[h] += day.get(scope)[h];
-          }
         }
       }
       for (String scope : sums.keySet()) {
@@ -144,17 +191,16 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
           );
         }
       }
-
+    } else {
       Map<String, Decimal> mtd = lastMonthToDate(
         def,
         target,
         isDateTime,
         scopesByUser
       );
-      for (String scope : allScopes) {
+      for (String scope : allScopes)
         if (!mtd.containsKey(scope))
           mtd.put(scope, 0);
-      }
       for (String scope : mtd.keySet()) {
         String key = mtdKey(scope, def.key, target.day());
         rows.put(

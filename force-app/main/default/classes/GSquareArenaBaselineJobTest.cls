@@ -197,4 +197,27 @@ private class GSquareArenaBaselineJobTest {
     Test.stopTest();
     System.assertNotEquals(null, jobId);
   }
+
+  @IsTest
+  static void runAsyncSplitsWorkIntoQueueableSteps() {
+    Date target = Date.newInstance(2026, 10, 6);
+    System.assertEquals(
+      8,
+      GSquareArenaBaselineJob.steps().size(),
+      '4 metrics x (hourly, mtd)'
+    );
+    Test.startTest();
+    Id jobId = GSquareArenaBaselineJob.runAsync(target);
+    Test.stopTest();
+    System.assertNotEquals(null, jobId);
+    String firstMetric = GSquareArenaBaselineJob.steps()[0][0];
+    System.assert(
+      [
+        SELECT COUNT()
+        FROM GSquare_Arena_Baseline__c
+        WHERE Metric_Key__c = :firstMetric AND Kind__c = 'HOURLY'
+      ] > 0,
+      'first step ran'
+    );
+  }
 }

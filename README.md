@@ -26,7 +26,7 @@ sf project deploy start -x manifest/package.xml --test-level RunLocalTests
 Then, once, in Execute Anonymous:
 
 ```apex
-GSquareArenaBaselineJob.computeFor(GSquareArenaBaselineJob.istToday()); // today's curves now
+GSquareArenaBaselineJob.runAsync(GSquareArenaBaselineJob.istToday());   // today's curves now (8 queued steps)
 GSquareArenaBaselineJob.scheduleNightly();                               // 01:30 every night
 ```
 

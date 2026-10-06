@@ -118,14 +118,9 @@ export default class GsquareSalesArena extends LightningElement {
     this.people = people;
     this.data = data;
     this.lastSuccessMs = Date.now();
-    this.zoneBookingsToday = Math.max(
-      this.zoneBookingsToday,
-      (data.totals || {}).booking || 0
-    );
-    this.zoneBookingsMtd = Math.max(
-      this.zoneBookingsMtd,
-      (data.mtdTotals || {}).booking || 0
-    );
+    // each refresh is the truth; events only add to it until the next one
+    this.zoneBookingsToday = (data.totals || {}).booking || 0;
+    this.zoneBookingsMtd = (data.mtdTotals || {}).booking || 0;
     if (firstLoad) this.startRefreshTimer((data.settings || {}).refreshSeconds);
   }
 

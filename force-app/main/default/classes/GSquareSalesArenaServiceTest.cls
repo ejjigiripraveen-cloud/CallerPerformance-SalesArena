@@ -5,7 +5,10 @@ private class GSquareSalesArenaServiceTest {
     static void setup() {
         Profile caller = [SELECT Id FROM Profile WHERE Name = 'Presales outbound' LIMIT 1];
         Profile tlProfile = [SELECT Id FROM Profile WHERE Name = 'Presales TL' LIMIT 1];
+        Profile admin = [SELECT Id FROM Profile WHERE Name = 'System Administrator' LIMIT 1];
         System.runAs(new User(Id = UserInfo.getUserId())) {
+            // runs the build: Asia/Kolkata so TODAY matches the IST test data, and full FLS
+            insert GSquareArenaTestData.newUser('arsadm', admin.Id, null, null);
             User tl = GSquareArenaTestData.newUser('arstl', tlProfile.Id, 'Arena Z1', null);
             insert tl;
             insert new List<User>{
@@ -21,7 +24,7 @@ private class GSquareSalesArenaServiceTest {
 
     private static GSquareSalesArenaWrapper.DashboardDTO buildAs(String zone) {
         GSquareSalesArenaWrapper.DashboardDTO dto;
-        System.runAs(u('arstl')) {
+        System.runAs(u('arsadm')) {
             dto = new GSquareSalesArenaService().build(zone);
         }
         return dto;
