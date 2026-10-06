@@ -98,3 +98,43 @@ export function mtdState(mtd, lastMonthToDate, prevMonthLabel) {
     text: `${pct >= 0 ? "+" : MINUS}${Math.abs(pct)}% vs ${prevMonthLabel}`
   };
 }
+
+/* ------------------------------------------------------------ playlist */
+
+export const BOARD_METRICS = [
+  "allocation",
+  "svScheduled",
+  "svConducted",
+  "booking",
+  "talktime"
+];
+const NO_BOTTOM_BOARD = new Set(["booking"]); // most callers have 0 bookings on any day
+export const BOTTOM_BOARDS_FROM_HOUR = 12;
+
+/** One ~3-minute cycle of scenes for the scene area. */
+export function buildPlaylist(ist, cycleIndex) {
+  const afternoon = ist.hour >= BOTTOM_BOARDS_FROM_HOUR;
+  const topSeconds = afternoon ? 20 : 30;
+  const list = [];
+  BOARD_METRICS.forEach((metricKey) => {
+    list.push({
+      id: `${metricKey}-top`,
+      kind: "top",
+      metricKey,
+      seconds: topSeconds
+    });
+    if (afternoon && !NO_BOTTOM_BOARD.has(metricKey)) {
+      list.push({
+        id: `${metricKey}-bottom`,
+        kind: "bottom",
+        metricKey,
+        seconds: 10
+      });
+    }
+  });
+  list.push({ id: "team-tl", kind: "team", seconds: 25 });
+  if (afternoon) list.push({ id: "watchlist", kind: "watchlist", seconds: 15 });
+  if (cycleIndex % 2 === 1)
+    list.push({ id: "team-leaders", kind: "leaders", seconds: 20 });
+  return list;
+}
