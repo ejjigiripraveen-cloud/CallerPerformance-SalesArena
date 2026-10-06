@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Caller_Initials__c</fullName>
+    <label>Caller Initials</label>
+    <length>4</length>
+    <required>false</required>
+    <type>Text</type>
+</CustomField>
