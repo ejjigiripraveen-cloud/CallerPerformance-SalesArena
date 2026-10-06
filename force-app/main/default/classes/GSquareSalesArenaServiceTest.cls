@@ -1,29 +1,126 @@
-/**
- * This class contains unit tests for validating the behavior of Apex classes
- * and triggers.
- *
- * Unit tests are class methods that verify whether a particular piece
- * of code is working properly. Unit test methods take no arguments,
- * commit no data to the database, and are flagged with the testMethod
- * keyword in the method definition.
- *
- * All test methods in an org are executed whenever Apex code is deployed
- * to a production org to confirm correctness, ensure code
- * coverage, and prevent regressions. All Apex classes are
- * required to have at least 75% code coverage in order to be deployed
- * to a production org. In addition, all triggers must have some code coverage.
- * 
- * The @isTest class annotation indicates this class only contains test
- * methods. Classes defined with the @isTest annotation do not count against
- * the org size limit for all Apex scripts.
- *
- * See the Apex Language Reference for more information about Testing and Code Coverage.
- */
-@isTest
-public class GSquareSalesArenaServiceTest {
+@IsTest
+private class GSquareSalesArenaServiceTest {
 
-   @isTest
-    public static void coverTest() {
-    GSquareSalesArenaService.testcover();
+    @TestSetup
+    static void setup() {
+        Profile caller = [SELECT Id FROM Profile WHERE Name = 'Presales outbound' LIMIT 1];
+        Profile tlProfile = [SELECT Id FROM Profile WHERE Name = 'Presales TL' LIMIT 1];
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            User tl = GSquareArenaTestData.newUser('arstl', tlProfile.Id, 'Arena Z1', null);
+            insert tl;
+            insert new List<User>{
+                GSquareArenaTestData.newUser('arsc1', caller.Id, 'Arena Z1', tl.Id),
+                GSquareArenaTestData.newUser('arsc2', caller.Id, 'Arena Z2', tl.Id)
+            };
+        }
+    }
+
+    private static User u(String alias) {
+        return [SELECT Id, Name FROM User WHERE Alias = :alias LIMIT 1];
+    }
+
+    private static GSquareSalesArenaWrapper.DashboardDTO buildAs(String zone) {
+        GSquareSalesArenaWrapper.DashboardDTO dto;
+        System.runAs(u('arstl')) {
+            dto = new GSquareSalesArenaService().build(zone);
+        }
+        return dto;
+    }
+
+    @IsTest
+    static void blankZoneIsNotConfigured() {
+        Test.startTest();
+        GSquareSalesArenaWrapper.DashboardDTO dto = new GSquareSalesArenaService().build('  ');
+        Test.stopTest();
+        System.assertEquals(false, dto.zoneConfigured);
+        System.assertEquals(0, dto.people.size());
+    }
+
+    @IsTest
+    static void filtersByZoneButRacesAllZones() {
+        Date today = GSquareArenaBaselineJob.istToday();
+        insert new List<SObject>{
+            GSquareArenaTestData.conductedVisit(u('arsc1').Id, today, 10, 0),
+            GSquareArenaTestData.conductedVisit(u('arsc2').Id, today, 10, 0)
+        };
+        Test.startTest();
+        GSquareSalesArenaWrapper.DashboardDTO dto = buildAs('Arena Z1');
+        Test.stopTest();
+
+        System.assertEquals(true, dto.zoneConfigured);
+        Set<Id> ids = new Set<Id>();
+        for (GSquareSalesArenaWrapper.PersonDTO p : dto.people) ids.add(p.userId);
+        System.assert(ids.contains(u('arsc1').Id), 'Z1 caller present');
+        System.assert(!ids.contains(u('arsc2').Id), 'Z2 caller filtered out');
+
+        Map<String, Decimal> race = new Map<String, Decimal>();
+        for (GSquareSalesArenaWrapper.ZoneRaceEntry e : dto.zoneRace) race.put(e.zone, e.svConducted);
+        System.assertEquals(1, race.get('Arena Z1'));
+        System.assertEquals(1, race.get('Arena Z2'));
+
+        System.assertEquals(2, dto.tlTeamSizes.get(String.valueOf(u('arstl').Id)), 'team size spans zones');
+    }
+
+    @IsTest
+    static void todayAndMtdTotalsAreSeparate() {
+        Date today = GSquareArenaBaselineJob.istToday();
+        List<SObject> visits = new List<SObject>{ GSquareArenaTestData.conductedVisit(u('arsc1').Id, today, 10, 0) };
+        Boolean hasEarlierDay = today.day() > 1;
+        if (hasEarlierDay) visits.add(GSquareArenaTestData.conductedVisit(u('arsc1').Id, today.addDays(-1), 10, 0));
+        insert visits;
+
+        Test.startTest();
+        GSquareSalesArenaWrapper.DashboardDTO dto = buildAs('Arena Z1');
+        Test.stopTest();
+
+        System.assertEquals(1, dto.totals.get('svConducted'));
+        System.assertEquals(hasEarlierDay ? 2 : 1, dto.mtdTotals.get('svConducted'));
+        System.assert(!dto.mtdTotals.containsKey('talktime'), 'MTD only for hero metrics');
+    }
+
+    @IsTest
+    static void readsBaselineForTodayAndTl() {
+        Date today = GSquareArenaBaselineJob.istToday();
+        Integer wd = GSquareArenaBaselineJob.weekdayOf(today);
+        String zoneScope = GSquareArenaBaselineJob.zoneScope('Arena Z1');
+        String tlScope = GSquareArenaBaselineJob.tlScope('Arena Z1', u('arstl').Id);
+        insert new List<GSquare_Arena_Baseline__c>{
+            new GSquare_Arena_Baseline__c(Unique_Key__c = GSquareArenaBaselineJob.hourlyKey(zoneScope, 'svConducted', wd, 10),
+                Scope_Key__c = zoneScope, Metric_Key__c = 'svConducted', Kind__c = 'HOURLY', Weekday__c = wd, Hour__c = 10, Value__c = 7),
+            new GSquare_Arena_Baseline__c(Unique_Key__c = GSquareArenaBaselineJob.hourlyKey(tlScope, 'svConducted', wd, 10),
+                Scope_Key__c = tlScope, Metric_Key__c = 'svConducted', Kind__c = 'HOURLY', Weekday__c = wd, Hour__c = 10, Value__c = 3),
+            new GSquare_Arena_Baseline__c(Unique_Key__c = GSquareArenaBaselineJob.mtdKey(zoneScope, 'booking', today.day()),
+                Scope_Key__c = zoneScope, Metric_Key__c = 'booking', Kind__c = 'MTD', Day_Of_Month__c = today.day(), Value__c = 9)
+        };
+        Test.startTest();
+        GSquareSalesArenaWrapper.DashboardDTO dto = buildAs('Arena Z1');
+        Test.stopTest();
+
+        System.assertEquals(7, dto.baseline.hourly.get('svConducted')[10]);
+        System.assertEquals(24, dto.baseline.hourly.get('svConducted').size());
+        System.assertEquals(9, dto.baseline.lastMonthToDate.get('booking'));
+        System.assertEquals(3, dto.baseline.tlHourly.get(String.valueOf(u('arstl').Id))[10]);
+    }
+
+    @IsTest
+    static void photoUrlParsing() {
+        String raw = 'https://gsquaregroup.lightning.force.com/lightning/r/ContentDocument/069AB000001abcDEFG/view';
+        System.assertEquals('069AB000001abcDEFG', GSquareSalesArenaService.extractDocumentId(raw));
+        System.assertEquals(null, GSquareSalesArenaService.extractDocumentId(null));
+        System.assertEquals(null, GSquareSalesArenaService.extractDocumentId('https://example.com/photo.png'));
+        Id versionId = '068AB000001abcD'; // 15-char: no checksum to fake
+        System.assertEquals(
+            '/sfc/servlet.shepherd/version/renditionDownload?rendition=THUMB240BY180&versionId=' + versionId,
+            GSquareSalesArenaService.renditionUrl(versionId)
+        );
+        System.assertEquals(null, GSquareSalesArenaService.renditionUrl(null));
+    }
+
+    @IsTest
+    static void initials() {
+        System.assertEquals('PR', GSquareSalesArenaService.initialsOf('Priya Ramesh'));
+        System.assertEquals('PR', GSquareSalesArenaService.initialsOf('priya k ramesh'));
+        System.assertEquals('M', GSquareSalesArenaService.initialsOf('Madonna'));
+        System.assertEquals('', GSquareSalesArenaService.initialsOf(null));
     }
 }

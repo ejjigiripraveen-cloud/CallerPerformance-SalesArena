@@ -10,15 +10,10 @@
 public without sharing class GSquareSalesArenaController {
 
     @AuraEnabled(cacheable=true)
-    public static GSquareSalesArenaWrapper.DashboardDTO getDashboard(String dateRangeMode) {
+    /** @param zone the TV page's Zone__c value; blank returns zoneConfigured = false. */
+    public static GSquareSalesArenaWrapper.DashboardDTO getDashboard(String zone) {
         try {
-            // Null/blank-safe: an LWC that hasn't been updated to pass this
-            // parameter yet (or passes null) gets the original TODAY-only
-            // behavior, not an error.
-            String mode = String.isNotBlank(dateRangeMode)
-                ? dateRangeMode
-                : GSquareSalesArenaWrapper.DATE_RANGE_TODAY;
-            return new GSquareSalesArenaService().build(mode);
+            return new GSquareSalesArenaService().build(zone);
         } catch (Exception e) {
             // FIX (audit finding #17): the previous message included raw
             // e.getMessage() and e.getLineNumber(), leaking internal
