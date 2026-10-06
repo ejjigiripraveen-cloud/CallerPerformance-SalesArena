@@ -138,3 +138,161 @@ export function buildPlaylist(ist, cycleIndex) {
     list.push({ id: "team-leaders", kind: "leaders", seconds: 20 });
   return list;
 }
+
+/* -------------------------------------------------------------- boards */
+
+const UNASSIGNED = "Unassigned";
+export const ALERT_PROFILE = "Presales outbound";
+const WATCHLIST_SCENE_LIMIT = 8; // two columns of four fit one scene
+const TEAM_METRICS = [
+  "allocation",
+  "svScheduled",
+  "svConducted",
+  "booking",
+  "talktime"
+];
+
+/** Bottom boards and Watchlist: available today, past tenure, outbound presales. */
+export function isEligible(p) {
+  return (
+    p.availability === true &&
+    p.tenureEligible === true &&
+    p.profileName === ALERT_PROFILE
+  );
+}
+
+const val = (p, key) => Number((p.metrics || {})[key]) || 0;
+
+function toRow(p, key, rank) {
+  return {
+    rank,
+    id: p.id,
+    name: p.name,
+    initials: p.initials,
+    photoUrl: p.photoUrl || null,
+    subLabel: `TL ${p.tlName || UNASSIGNED}`,
+    value: val(p, key),
+    movement: null
+  };
+}
+
+export function topRows(people, key, n = 10) {
+  return [...people]
+    .sort((a, b) => val(b, key) - val(a, key) || a.name.localeCompare(b.name))
+    .slice(0, n)
+    .map((p, i) => toRow(p, key, i + 1));
+}
+
+export function bottomRows(people, key, n = 5) {
+  return people
+    .filter(isEligible)
+    .sort((a, b) => val(a, key) - val(b, key) || a.name.localeCompare(b.name))
+    .slice(0, n)
+    .map((p, i) => toRow(p, key, i + 1));
+}
+
+const LEVELS = {
+  tl: { id: "tlId", name: "tlName", prefix: "TL" },
+  manager: { id: "managerId", name: "managerName", prefix: "Manager" },
+  head: { id: "headId", name: "headName", prefix: "Head" }
+};
+
+/** Team rows for the TL table (level 'tl') or the leaders scene ('manager' | 'head'). */
+export function teamRows(
+  people,
+  level,
+  { tlTeamSizes = {}, tlPace = {} } = {}
+) {
+  const lv = LEVELS[level];
+  const groups = new Map();
+  people.forEach((p) => {
+    const id = p[lv.id];
+    if (!id || p[lv.name] === UNASSIGNED) return;
+    if (!groups.has(id)) groups.set(id, { id, name: p[lv.name], members: [] });
+    groups.get(id).members.push(p);
+  });
+  return [...groups.values()]
+    .map((g) => {
+      const row = {
+        id: g.id,
+        name: g.name,
+        label: `${lv.prefix} ${g.name}`,
+        pace: null
+      };
+      TEAM_METRICS.forEach((k) => {
+        row[k] = g.members.reduce((s, p) => s + val(p, k), 0);
+      });
+      if (level === "tl") {
+        const size = tlTeamSizes[g.id];
+        if (size && size !== g.members.length) {
+          row.label = `${row.label} \u00b7 ${g.members.length} of ${size} callers`;
+        }
+        row.pace = tlPace[g.id] || null;
+      }
+      return row;
+    })
+    .sort(
+      (a, b) => b.svConducted - a.svConducted || a.name.localeCompare(b.name)
+    );
+}
+
+/**
+ * Existing watchlist rules (below the zone average on >= watchlistMinWeak
+ * metrics; critical at >= alertCriticalZeroCount zeros; worst first),
+ * listing eligible callers only. Averages use every assigned caller.
+ */
+export function watchlistRows(people, metricDefs, settings) {
+  const mapped = people.filter((p) => p.tlName && p.tlName !== UNASSIGNED);
+  if (!mapped.length) return [];
+  const scored = metricDefs.filter((m) => !m.isRate);
+  const avg = {};
+  scored.forEach((m) => {
+    avg[m.key] = mapped.reduce((s, p) => s + val(p, m.key), 0) / mapped.length;
+  });
+  const out = [];
+  mapped.filter(isEligible).forEach((p) => {
+    const reasons = scored
+      .filter((m) => val(p, m.key) < avg[m.key])
+      .map((m) => ({
+        metric: m.label,
+        value: Math.round(val(p, m.key)),
+        unit: m.unit || "",
+        isZero: val(p, m.key) === 0
+      }));
+    if (reasons.length >= settings.watchlistMinWeak) {
+      const zeros = reasons.filter((r) => r.isZero).length;
+      out.push({
+        id: p.id,
+        name: p.name,
+        initials: p.initials,
+        photoUrl: p.photoUrl || null,
+        reasons,
+        zeros,
+        severity:
+          zeros >= settings.alertCriticalZeroCount ? "critical" : "important"
+      });
+    }
+  });
+  out.sort(
+    (a, b) =>
+      b.zeros - a.zeros ||
+      b.reasons.length - a.reasons.length ||
+      a.name.localeCompare(b.name)
+  );
+  return out.slice(
+    0,
+    Math.min(
+      settings.watchlistMaxEntries || WATCHLIST_SCENE_LIMIT,
+      WATCHLIST_SCENE_LIMIT
+    )
+  );
+}
+
+/** Rank change since the last refresh, per board. Returns new rows. */
+export function applyMovement(rows, prevRanksByBoard, boardKey) {
+  const prev = prevRanksByBoard.get(boardKey);
+  return rows.map((r) => {
+    const before = prev ? prev.get(r.id) : undefined;
+    return { ...r, movement: before === undefined ? null : before - r.rank };
+  });
+}
