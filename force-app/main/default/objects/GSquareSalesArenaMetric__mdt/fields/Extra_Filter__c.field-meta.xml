@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Extra_Filter__c</fullName>
+    <description>Pipe-separated safe conditions only, e.g. &quot;Amount__c &gt;= 5000|Stage__c != &apos;Lost&apos;&quot;. Validated at query time, never raw SOQL. See GSquareSalesArenaService.buildSafeExtraFilters().</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Extra Filter</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
