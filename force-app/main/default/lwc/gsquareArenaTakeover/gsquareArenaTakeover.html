@@ -1,0 +1,15 @@
+<template>
+  <div class="takeover" role="status">
+    <div class="kick">New booking</div>
+    <template lwc:if={booking.photoUrl}
+      ><img class="big" src={booking.photoUrl} alt=""
+    /></template>
+    <template lwc:else><div class="big">{booking.initials}</div></template>
+    <div class="who">{booking.callerName}</div>
+    <div class="meta">{meta}</div>
+    <template lwc:if={booking.project}
+      ><div class="project">{booking.project}</div></template
+    >
+    <div class="count">{booking.countText}</div>
+  </div>
+</template>

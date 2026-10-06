@@ -1,0 +1,10 @@
+<template>
+  <div class="race">
+    <span class="lbl">Zone race, SV conducted today</span>
+    <template for:each={views} for:item="e">
+      <span key={e.zone} class="z" data-current={e.current}
+        >{e.zone}<b class="num">{e.svConducted}</b></span
+      >
+    </template>
+  </div>
+</template>

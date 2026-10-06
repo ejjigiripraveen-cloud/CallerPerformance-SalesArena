@@ -1,0 +1,21 @@
+<template>
+  <template lwc:if={hasRows}>
+    <div class="watch">
+      <template for:each={views} for:item="w">
+        <div key={w.id} class={w.rowClass}>
+          <template lwc:if={w.photoUrl}
+            ><img class="av" src={w.photoUrl} alt=""
+          /></template>
+          <template lwc:else><span class="av">{w.initials}</span></template>
+          <span class="who"
+            ><span class="nm">{w.name}</span
+            ><span class="why">{w.why}</span></span
+          >
+        </div>
+      </template>
+    </div>
+  </template>
+  <template lwc:else>
+    <div class="empty">Nobody on the watchlist right now</div>
+  </template>
+</template>

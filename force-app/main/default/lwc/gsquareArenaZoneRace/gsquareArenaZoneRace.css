@@ -1,0 +1,28 @@
+.race {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 3cqh;
+  padding: 0 2.2cqh;
+  border-top: 1px solid var(--arena-panel2);
+  font-size: 2.8cqh;
+  color: var(--arena-sub);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.lbl {
+  color: var(--arena-text);
+  font-weight: 600;
+}
+.z[data-current="true"] {
+  color: var(--arena-text);
+  font-weight: 700;
+  background: var(--arena-panel2);
+  padding: 0.4cqh 1.4cqh;
+  border-radius: 1cqh;
+}
+b {
+  font-family: var(--arena-num-font);
+  font-size: 3.4cqh;
+  margin-left: 0.8cqh;
+}

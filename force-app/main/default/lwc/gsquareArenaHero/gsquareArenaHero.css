@@ -1,0 +1,120 @@
+.hero {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr 1fr 1fr;
+  gap: 1.6cqh;
+  padding: 2cqh 2.2cqh 1.6cqh;
+  box-sizing: border-box;
+}
+.num {
+  font-family: var(--arena-num-font);
+  font-variant-numeric: tabular-nums;
+}
+.id {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.6cqh;
+  min-width: 0;
+}
+.zone {
+  font-size: 3.2cqh;
+  font-weight: 600;
+  color: var(--arena-sub);
+}
+.clock {
+  font-size: 11.1cqh;
+  line-height: 0.9;
+  font-weight: 600;
+}
+.ampm {
+  font-size: 4cqh;
+  margin-left: 1cqh;
+}
+.date,
+.tlabel,
+.pace {
+  font-size: 2.4cqh;
+}
+.date,
+.tlabel {
+  color: var(--arena-sub);
+}
+.updated {
+  font-size: 2.2cqh;
+  color: var(--arena-faint);
+}
+.updated.amber {
+  color: var(--arena-warn);
+}
+.updated.red {
+  color: var(--arena-crit);
+  font-weight: 600;
+}
+.tile {
+  background: var(--arena-panel);
+  border-radius: 1.4cqh;
+  padding: 1.6cqh 2cqh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-top: 0.7cqh solid var(--arena-panel2);
+  min-width: 0;
+}
+.tile[data-tone="good"] {
+  border-top-color: var(--arena-good);
+}
+.tile[data-tone="warning"] {
+  border-top-color: var(--arena-warn);
+}
+.tile[data-tone="critical"] {
+  border-top-color: var(--arena-crit);
+}
+.today {
+  font-size: 11.1cqh;
+  line-height: 0.95;
+  font-weight: 700;
+}
+.pace {
+  font-weight: 600;
+  color: var(--arena-sub);
+}
+.tile[data-tone="good"] .pace {
+  color: var(--arena-good);
+}
+.tile[data-tone="warning"] .pace {
+  color: var(--arena-warn);
+}
+.tile[data-tone="critical"] .pace {
+  color: var(--arena-crit);
+}
+.mtd {
+  display: flex;
+  align-items: baseline;
+  gap: 1.2cqh;
+  border-top: 1px solid var(--arena-panel2);
+  padding-top: 0.8cqh;
+}
+.k,
+.d {
+  font-size: 2.2cqh;
+}
+.k {
+  color: var(--arena-sub);
+}
+.v {
+  font-size: 4.4cqh;
+  font-weight: 600;
+}
+.d {
+  margin-left: auto;
+}
+.d.good {
+  color: var(--arena-good);
+}
+.d.warning {
+  color: var(--arena-warn);
+}
+.d.neutral {
+  color: var(--arena-sub);
+}

@@ -1,0 +1,21 @@
+<template>
+  <div class="hero">
+    <div class="id">
+      <div class="zone">{zoneName}</div>
+      <div class="clock num">{clockText}<span class="ampm">{ampm}</span></div>
+      <div class="date">{dateText}</div>
+      <div class={updatedClass} data-id="updated">{updatedText}</div>
+    </div>
+    <template for:each={tileViews} for:item="t">
+      <div key={t.key} class="tile" data-tone={t.tone}>
+        <div class="tlabel">{t.label}</div>
+        <div class="today num">{t.today}</div>
+        <div class="pace">{t.paceText}</div>
+        <div class="mtd">
+          <span class="k">MTD</span><span class="v num">{t.mtdText}</span
+          ><span class={t.mtdClass}>{t.mtdDelta}</span>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>

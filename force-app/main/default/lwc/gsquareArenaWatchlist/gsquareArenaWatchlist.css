@@ -1,0 +1,51 @@
+.watch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1cqh 2.4cqh;
+}
+.wrow {
+  display: grid;
+  grid-template-columns: 6.4cqh 1fr;
+  gap: 1.4cqh;
+  align-items: center;
+  background: var(--arena-panel);
+  border-radius: 1.2cqh;
+  padding: 1cqh 1.6cqh;
+  border-left: 0.8cqh solid var(--arena-warn);
+}
+.wrow.critical {
+  border-left-color: var(--arena-crit);
+}
+.av {
+  width: 6.4cqh;
+  height: 6.4cqh;
+  border-radius: 50%;
+  background: var(--arena-avatar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4cqh;
+  font-weight: 600;
+  object-fit: cover;
+}
+.who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.nm {
+  font-size: 3.7cqh;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.why {
+  font-size: 2.2cqh;
+  color: var(--arena-sub);
+}
+.empty {
+  font-size: 3.6cqh;
+  color: var(--arena-sub);
+  padding: 4cqh 0;
+}
