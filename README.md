@@ -1,58 +1,66 @@
-# Salesforce DX Project
+# G Square Sales Arena: zone TV wall
 
-Salesforce DX is a development approach that brings source-driven development, team collaboration, and continuous integration to the Salesforce Platform. Instead of working directly in an org through a web browser, you work with metadata as source files in a local DX project, track changes in version control, and deploy through automated processes.
+One TV per zone. Each screen has a fixed hero band (today and month-to-date pace for Allocation, SV Conducted and Booking), a 3-minute scene cycle (top boards, bottom boards from 12 pm, TL table, Watchlist, managers and heads), a zone race strip, and a full-screen celebration for every booking.
 
-This project template gets you started with the tools and structure you need to build Salesforce applications using source control, scratch orgs, and the Salesforce CLI.
+Design spec: https://claude.ai/code/artifact/ddeec28e-e566-4425-8894-dd723d9d1fb1
+Implementation plan: `docs/superpowers/plans/2026-10-06-zone-tv-wall.md`
 
-## Prerequisites
+## What is in this project
 
-Before you start, make sure you have:
+| Path | Purpose |
+| --- | --- |
+| `lwc/gsquareSalesArena` | The TV page: data, timers, booking subscription |
+| `lwc/gsquareArenaLogic` | Every rule (pace, playlist, boards, Watchlist, TV ops), Jest-tested |
+| `lwc/gsquareArenaHero`, `Board`, `TeamTable`, `Watchlist`, `Takeover`, `ZoneRace` | Presentational pieces |
+| `classes/GSquareSalesArenaService` | Zone payload: today + MTD, zone race, baseline, photos |
+| `classes/GSquareArenaBaselineJob` | Nightly "typical day" curves into `GSquare_Arena_Baseline__c` |
+| `classes/GSquareArenaBookingEvents` + `triggers/GSquareArenaBookingTrigger` | Publishes `GSquare_Arena_Booking__e` |
+| `permissionsets/GSquare_Arena_TV` | For the shared TV user |
 
-- **Salesforce CLI** - Download from [developer.salesforce.com/tools/salesforcecli](https://developer.salesforce.com/tools/salesforcecli). See [Install Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_install_cli.htm) for details.
-- **VS Code with Salesforce Extension Pack** - See [Installation Instructions](https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/install.html) for details. Includes the Agentforce Vibes extension.
-- **A development org** - Sign up for a free Developer Edition org [here](https://developer.salesforce.com/signup).
-- **Dev Hub enabled** (optional, required to create scratch orgs) - You can enable Dev Hub in your development org under Setup > Dev Hub.  See [Provide Developers Access to Salesforce DX Tools](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_setup_dx_tools.htm).
+## Deploy
 
-## Project Structure
+```bash
+sf project deploy start -x manifest/package.xml --test-level RunLocalTests
+```
 
-Your DX project follows this structure:
+Then, once, in Execute Anonymous:
 
-- **`force-app/main/default/`** - Your metadata source files live in this default package directory. You can configure additional package directories in the `sfdx-project.json` file.
-- **`config/`** - Scratch org definitions and project settings
-- **`scripts/`** - Automation scripts for common tasks
-- **`sfdx-project.json`** - Project manifest that defines package directories, namespace, API version, and other project-level settings
+```apex
+GSquareArenaBaselineJob.computeFor(GSquareArenaBaselineJob.istToday()); // today's curves now
+GSquareArenaBaselineJob.scheduleNightly();                               // 01:30 every night
+```
 
-See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm).
+The cron runs in the org's timezone. If the org is not on IST, adjust `GSquareArenaBaselineJob.CRON` so it runs after midnight IST. Pace tiles read "No baseline yet" until the job has run; curves become meaningful once four weeks of the same weekday exist.
 
-## Get Started
+## Shared TV user checklist
 
-Ready to start developing? The [Get Started with Salesforce DX](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_get_started_dx.htm) guide walks you through your first project, from creating a scratch org to creating a simple Apex class or LWC to deploying your code to a sandbox.
+- [ ] Time zone set to **Asia/Kolkata**. "Today" and "this month" use this user's timezone.
+- [ ] Permission set **G Square Arena TV** assigned.
+- [ ] Read access to Lead, `Site_Visit__c`, Opportunity and `Call_Detail__c` and every field the metrics use. A missing field silently drops that metric; check the debug log for `[Sales Arena]` warnings.
+- [ ] Read access to the profile-photo files (`User.Profile_Photo_Document_Id__c`).
+- [ ] Session timeout on the profile: 24 hours. The page also reloads itself at 08:30 IST and on an expired session.
+- [ ] Optional: login IP ranges limited to the office network.
 
-## Common Salesforce CLI Commands
+## One Lightning App Page per zone
 
-Here are common CLI commands that you'll use the most:
+1. Create an App Page with a one-region layout, add **G Square Sales Arena**, and set **Zone** to the exact `User.Zone__c` value.
+2. Open it on the TV in a full-screen (kiosk) browser, Chrome 105 or newer. Text sizes use container units.
 
-- `sf org login web`: Authorize an org
-- `sf org open`: Open your org in a browser
-- `sf org create scratch`: Create a scratch org
-- `sf project deploy start`: Deploy metadata to your org
-- `sf project retrieve start`: Retrieve metadata from your org
-- `sf template generate <artifact>`: Scaffold new components, such as Apex classes and triggers, LWC components, Lightning apps, and more
-- `sf apex <command>`: Run Apex tests, run anonymous Apex blocks, and view logs
-- `sf data <command>`: Work with test data
-- `sf alias <command>`: Manage org aliases
-- `sf config <command>`: Configure CLI settings
+## Settings worth knowing
 
-## Use Agentforce Vibes to Build Lightning Apps
+| Setting | Where | Value |
+| --- | --- | --- |
+| Bottom boards and Watchlist start | `gsquareArenaLogic` `BOTTOM_BOARDS_FROM_HOUR` | 12 |
+| Office hours (screen dims outside) | `OFFICE_START_HOUR` / `OFFICE_END_HOUR` | 9 / 20 IST |
+| Daily reload | `DAILY_RELOAD` | 08:30 IST |
+| Stale warning | `STALE_AMBER_MIN` / `STALE_RED_MIN` | 6 / 10 min |
+| Project name on the booking celebration | `GSquareArenaBookingEvents.PROJECT_FIELD` | not set yet |
+| Bottom-board eligibility | `isEligible` | `Availability__c` true, 45+ days tenure, Presales outbound |
 
-Transform your ideas into custom Lightning apps that extend CRM workflows directly in Lightning Experience. Through natural conversations with Agentforce Vibes, implement custom objects and fields, complex business logic, and dynamic UI components. See [Build a Lightning App Using Agentforce Vibes](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/lexapp-overview.html).
+## Local checks
 
-## Additional Resources
-
-- [Agentforce Vibes Developer Guide](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/einstein-overview.html)
-- [Salesforce CLI Installation Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/)
-- [Salesforce CLI Plugin Development Guide](https://developer.salesforce.com/docs/platform/salesforce-cli-plugin/guide/conceptual-overview.html)
-- [Salesforce VS Code Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
-
+```bash
+npm install
+npm run test:unit                                 # LWC Jest suite
+scripts/apex-parse-check.sh force-app/main/default/classes/*.cls   # Apex syntax only
+```
