@@ -296,3 +296,77 @@ export function applyMovement(rows, prevRanksByBoard, boardKey) {
     return { ...r, movement: before === undefined ? null : before - r.rank };
   });
 }
+
+/* -------------------------------------------------------------- TV ops */
+
+const MINUTE = 60000;
+export const STALE_AMBER_MIN = 6;
+export const STALE_RED_MIN = 10;
+export const OFFICE_START_HOUR = 9;
+export const OFFICE_END_HOUR = 20;
+export const DAILY_RELOAD = { hour: 8, minute: 30 };
+const BURN_IN_STEPS = [
+  { x: 0, y: 0 },
+  { x: 2, y: 0 },
+  { x: 2, y: 2 },
+  { x: 0, y: 2 }
+];
+
+export function staleState(lastSuccessMs, nowMs) {
+  if (!lastSuccessMs) return "red";
+  const mins = (nowMs - lastSuccessMs) / MINUTE;
+  if (mins >= STALE_RED_MIN) return "red";
+  if (mins >= STALE_AMBER_MIN) return "amber";
+  return "fresh";
+}
+
+export function updatedText(lastSuccessMs, nowMs) {
+  if (staleState(lastSuccessMs, nowMs) === "red")
+    return "Data paused, reconnecting";
+  const mins = Math.floor((nowMs - lastSuccessMs) / MINUTE);
+  return mins < 1 ? "Updated just now" : `Updated ${mins} min ago`;
+}
+
+export function isAuthError(error) {
+  if (!error) return false;
+  if (error.status === 401) return true;
+  const msg = (error.body && error.body.message) || error.message || "";
+  return /session (expired|invalid)|invalid session/i.test(msg);
+}
+
+export function shouldDailyReload(ist, lastReloadDateKey) {
+  if (ist.dateKey === lastReloadDateKey) return false;
+  return (
+    ist.hour > DAILY_RELOAD.hour ||
+    (ist.hour === DAILY_RELOAD.hour && ist.minute >= DAILY_RELOAD.minute)
+  );
+}
+
+export function isDimmed(ist) {
+  return ist.hour < OFFICE_START_HOUR || ist.hour >= OFFICE_END_HOUR;
+}
+
+export function burnInOffset(nowMs) {
+  return BURN_IN_STEPS[Math.floor(nowMs / (5 * MINUTE)) % BURN_IN_STEPS.length];
+}
+
+/** FIFO of booking takeovers; an opportunity is celebrated once per page life. */
+export class TakeoverQueue {
+  constructor() {
+    this.items = [];
+    this.seen = new Set();
+  }
+  push(event) {
+    const id = event && event.opportunityId;
+    if (!id || this.seen.has(id)) return false;
+    this.seen.add(id);
+    this.items.push(event);
+    return true;
+  }
+  next() {
+    return this.items.shift() || null;
+  }
+  get size() {
+    return this.items.length;
+  }
+}
