@@ -1,207 +1,68 @@
 <template>
-    <div class="stage">
-
-        <!-- LOADING -->
-        <template if:true={loading}>
-            <div class="state-msg">Loading Sales Arena&hellip;</div>
-        </template>
-
-        <!-- ERROR -->
-        <template if:true={error}>
-            <div class="state-msg error">
-                <div class="state-title">Data unavailable</div>
-                <div class="state-detail">{error}</div>
+  <div class={tvClass}>
+    <template lwc:if={isReady}>
+      <div class="screen" style={screenStyle}>
+        <c-gsquare-arena-hero
+          class="band-hero"
+          zone-name={zoneName}
+          clock-text={clockText}
+          ampm={ampm}
+          date-text={dateText}
+          tiles={heroTiles}
+          updated-text={updatedText}
+          stale-state={staleState}
+        ></c-gsquare-arena-hero>
+        <div class="scene">
+          <div class="shead">
+            <div class="stitle">{sceneTitle}</div>
+            <div class="ssub">{sceneSubtitle}</div>
+            <div class="dots">
+              <template for:each={progressDots} for:item="d">
+                <i key={d.key} class={d.cls}></i>
+              </template>
             </div>
-        </template>
-
-        <template if:true={data}>
-            <!-- TOP BAR -->
-            <div class="topbar">
-                <div class="brand">
-                    <div class="brand-mark">GS</div>
-                    <div>
-                        <h1>G SQUARE SALES ARENA</h1>
-                        <div class="brand-sub">Live Performance Command Center</div>
-                    </div>
-                </div>
-                <div class="top-right">
-                    <div class="live-pill"><span class="live-dot"></span><span>LIVE</span></div>
-                    <div class="clock-block">
-                        <div class="time">{clockText} IST</div>
-                        <div class="updated">LAST UPDATED <b>{lastUpdatedText}</b></div>
-                        <template if:true={isStale}>
-                            <div class="stale-indicator">&#9888; Stale data &mdash; last updated {staleSinceText}</div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FUNNEL STRIP -->
-            <div class="kpi-strip">
-                <template for:each={funnelCards} for:item="card" for:index="i">
-                    <div key={card.key} class={card.accentClass}>
-                        <div class="kpi-top">
-                            <div class="kpi-label">{card.label}</div>
-                            <div class="kpi-value">{card.value}</div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- CONVERSION LINKS -->
-            <div class="funnel-links">
-                <template for:each={funnelLinks} for:item="lk">
-                    <div key={lk.key} class={lk.cssClass}>
-                        <div class="fl-pct">{lk.pct}</div>
-                        <div class="fl-label">{lk.label}</div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- INSIGHTS -->
-            <div class="insights">
-                <template for:each={insightCards} for:item="ins">
-                    <div key={ins.key} class="insight-card">
-                        <div class="insight-tag">{ins.label}</div>
-                        <div class="insight-name">{ins.name}</div>
-                        <div class="insight-metric">{ins.metric}</div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- ARENA -->
-            <div class="arena">
-                <div class="tier-header">
-                    <div class="tier-title-wrap">
-                        <div class="tier-title">{tierLabel}</div>
-                        <template if:true={isTeamTier}>
-                            <div class="team-context">
-                                TEAM <b>{currentTeamTl}</b>
-                                <span class="tc-count">{teamMeta}</span>
-                            </div>
-                        </template>
-                    </div>
-                    <div class="tier-timer">
-                        <div class="tier-timer-bar">
-                            <div class="tier-timer-fill"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BOARDS: one per configured metric, in config order -->
-                <div class="boards">
-                    <template for:each={boards} for:item="b">
-                        <div key={b.key} class={b.cssClass}>
-                            <div class="board-head">
-                                <div class="board-title">
-                                    {b.label}
-                                    <template if:true={b.qualifier}>
-                                        <span class="bq">{b.qualifier}</span>
-                                    </template>
-                                </div>
-                                <div class="board-total">{b.total}</div>
-                            </div>
-                            <div class="rows">
-                                <template if:true={b.hasRows}>
-                                    <template for:each={b.rows} for:item="r">
-                                        <div key={r.key} class={r.rankClass}>
-                                            <div class="rank">{r.rank}</div>
-                                            <div class="rname">
-                                                {r.name}
-                                                <template if:true={r.subLabel}>
-                                                    <span class="rsub">{r.subLabel}</span>
-                                                </template>
-                                            </div>
-                                            <div class="rbar-wrap">
-                                                <div class="rbar" style={r.barStyle}></div>
-                                            </div>
-                                            <div class="rval">{r.value}</div>
-                                            <div class={r.gapClass}>{r.gap}</div>
-                                        </div>
-                                    </template>
-                                </template>
-                                <template if:false={b.hasRows}>
-                                    <div class="empty-row">{b.emptyText}</div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- ALERT POPUP (fixed, never overlaps KPI cards) -->
-            <template if:true={alertVisible}>
-                <div class={alertClass}>
-                    <div class="alert-top">
-                        <div class="alert-badge">{alertBadge}</div>
-                    </div>
-                    <div class="alert-name">{activeAlert.name}</div>
-                    <div class="alert-sub">{alertSub}</div>
-                    <div class="alert-chip-row">
-                        <template for:each={alertChips} for:item="chip">
-                            <span key={chip.key} class="alert-chip">{chip.text}</span>
-                        </template>
-                    </div>
-                </div>
+          </div>
+          <div class="bar"><b style={progressStyle}></b></div>
+          <div class="sbody">
+            <template lwc:if={isBoardScene}>
+              <c-gsquare-arena-board
+                rows={boardRows}
+                variant={boardVariant}
+                unit={boardUnit}
+              ></c-gsquare-arena-board>
             </template>
-
-            <!-- MANAGER / HEAD OVERLAY (inlined -- was a separate
-                 salesArenaOverlay component; consolidated into this single
-                 bundle per the requested structure). -->
-            <template if:true={overlayVisible}>
-                <div class="overlay">
-                    <div class="ov-head">
-                        <div>
-                            <div class="ov-title">{overlayTitle}</div>
-                            <div class="ov-sub">{overlaySubtitle}</div>
-                        </div>
-                        <button class="ov-close" onclick={handleOverlayClose}>&times;</button>
-                    </div>
-
-                    <template if:true={overlayHasConfigError}>
-                        <div class="ov-config-error">{overlayConfigErrorMessage}</div>
-                    </template>
-
-                    <template if:false={overlayHasConfigError}>
-                    <table class="ov-table">
-                        <thead>
-                            <tr>
-                                <th class="w46"></th>
-                                <th class="left">Name</th>
-                                <th>{overlaySubLabel}</th>
-                                <th>Callers</th>
-                                <template for:each={overlayColumns} for:item="c">
-                                    <th key={c.key}>{c.label}</th>
-                                </template>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={overlayRows} for:item="r">
-                                <tr key={r.key} class={r.rowClass}>
-                                    <td class="rank">{r.rank}</td>
-                                    <td class="name">{r.name}</td>
-                                    <td class="size">{r.subCount}</td>
-                                    <td class="size">{r.count}</td>
-                                    <template for:each={r.cells} for:item="c">
-                                        <td key={c.key} class={c.cssClass}>{c.text}</td>
-                                    </template>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    </template>
-                    <div class="ov-note">{overlayNote}</div>
-                </div>
+            <template lwc:elseif={isTeamScene}>
+              <c-gsquare-arena-team-table
+                rows={teamTableRows}
+                show-pace={showPace}
+              ></c-gsquare-arena-team-table>
             </template>
-
-            <!-- CONFIG WARNINGS -->
-            <template if:true={hasWarnings}>
-                <div class="warn-strip">
-                    <template for:each={warningItems} for:item="w">
-                        <span key={w.key} class="warn-item">{w.text}</span>
-                    </template>
-                </div>
+            <template lwc:elseif={isWatchlistScene}>
+              <c-gsquare-arena-watchlist
+                rows={watchRows}
+              ></c-gsquare-arena-watchlist>
             </template>
-        </template>
-    </div>
+          </div>
+        </div>
+        <c-gsquare-arena-zone-race
+          class="band-race"
+          entries={raceEntries}
+          current-zone={zoneParam}
+        ></c-gsquare-arena-zone-race>
+      </div>
+      <template lwc:if={activeBooking}>
+        <c-gsquare-arena-takeover
+          booking={activeBooking}
+        ></c-gsquare-arena-takeover>
+      </template>
+    </template>
+    <template lwc:elseif={isLoading}>
+      <div class="notice">Loading {zoneParam}</div>
+    </template>
+    <template lwc:else>
+      <div class="notice">
+        Zone not configured. Set the Zone property on this Lightning page.
+      </div>
+    </template>
+  </div>
 </template>
