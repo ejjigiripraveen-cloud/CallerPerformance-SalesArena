@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Day_Of_Month__c</fullName>
+    <label>Day Of Month</label>
+    <type>Number</type>
+    <precision>2</precision>
+    <scale>0</scale>
+</CustomField>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description
+  >Nightly "typical day" baselines for the Sales Arena zone TV wall. Written by GSquareArenaBaselineJob; read by GSquareSalesArenaService.</description>
+    <label>Arena Baseline</label>
+    <pluralLabel>Arena Baselines</pluralLabel>
+    <nameField>
+        <label>Baseline Name</label>
+        <type>AutoNumber</type>
+        <displayFormat>ARB-{000000}</displayFormat>
+    </nameField>
+    <sharingModel>ReadWrite</sharingModel>
+    <enableReports>false</enableReports>
+    <enableSearch>false</enableSearch>
+</CustomObject>
