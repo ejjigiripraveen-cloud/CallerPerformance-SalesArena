@@ -113,7 +113,7 @@ export const BOTTOM_BOARDS_FROM_HOUR = 12;
 
 /* Team tables page instead of scrolling: nobody scrolls a wall TV. Sizes are
    in container-height units, so the same number of rows fits on every screen. */
-export const TEAM_ROWS_PER_PAGE = 6;
+export const TEAM_ROWS_PER_PAGE = 5;
 export const TEAM_PAGE_SECONDS = 8;
 
 export function pageCount(rowCount, perPage = TEAM_ROWS_PER_PAGE) {

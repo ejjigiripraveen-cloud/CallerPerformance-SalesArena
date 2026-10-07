@@ -84,11 +84,18 @@ describe("buildPlaylist", () => {
 describe("team table paging", () => {
   const rows = Array.from({ length: 14 }, (_, i) => ({ id: `t${i}` }));
 
-  it("splits into pages of 6", () => {
+  it("splits into pages of 5, as many pages as the TLs need", () => {
     expect(pageCount(0)).toBe(1);
-    expect(pageCount(6)).toBe(1);
+    expect(pageCount(5)).toBe(1);
+    expect(pageCount(6)).toBe(2);
     expect(pageCount(14)).toBe(3);
-    expect(pageRows(rows, 2).map((r) => r.id)).toEqual(["t12", "t13"]);
+    expect(pageCount(23)).toBe(5);
+    expect(pageRows(rows, 2).map((r) => r.id)).toEqual([
+      "t10",
+      "t11",
+      "t12",
+      "t13"
+    ]);
   });
 
   it("walks the pages evenly across the scene", () => {
