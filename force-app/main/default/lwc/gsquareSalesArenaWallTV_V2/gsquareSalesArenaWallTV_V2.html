@@ -60,9 +60,26 @@
       <div class="notice">Loading {zoneParam}</div>
     </template>
     <template lwc:else>
-      <div class="notice">
-        Zone not configured. Set the Zone property on this Lightning page.
-      </div>
+      <div class="notice">Choose a zone from the menu at the top right.</div>
+    </template>
+    <template lwc:if={showZonePicker}>
+      <label class="zone-pick">
+        <span class="zone-pick-label">Zone</span>
+        <select
+          class="zone-pick-select"
+          aria-label="Zone"
+          onchange={handleZoneChange}
+        >
+          <option value="" disabled selected={noZoneSelected}>
+            Choose zone
+          </option>
+          <template for:each={zoneChoices} for:item="z">
+            <option key={z.value} value={z.value} selected={z.selected}>
+              {z.value}
+            </option>
+          </template>
+        </select>
+      </label>
     </template>
   </div>
 </template>

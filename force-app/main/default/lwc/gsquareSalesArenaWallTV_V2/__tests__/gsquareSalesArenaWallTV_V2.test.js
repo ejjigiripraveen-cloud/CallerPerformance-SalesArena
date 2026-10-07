@@ -2,6 +2,7 @@ import { createElement } from "lwc";
 import GsquareSalesArena from "c/gsquareSalesArenaWallTV_V2";
 import getDashboard from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard";
 import { subscribe } from "lightning/empApi";
+import { getPicklistValues } from "lightning/uiObjectInfoApi";
 
 jest.mock(
   "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard",
@@ -109,6 +110,7 @@ const text = (el, sel) => {
 beforeEach(() => {
   jest.useFakeTimers();
   jest.setSystemTime(T0);
+  window.localStorage.clear();
   subscribe.mockImplementation((channel, replay, cb) => {
     bookingHandler = cb;
     return Promise.resolve({ id: "sub" });
@@ -130,7 +132,7 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     const el = mount("");
     await flush();
     expect(text(el, ".notice")).toBe(
-      "Zone not configured. Set the Zone property on this Lightning page."
+      "Choose a zone from the menu at the top right."
     );
     expect(el.shadowRoot.querySelector("c-gsquare-arena-hero")).toBeNull();
   });
@@ -271,10 +273,62 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     expect(hero.staleState).toBe("red");
   });
 
-  it("has no interactive controls", async () => {
+  it("has no controls besides the zone picker", async () => {
     const el = mount();
     getDashboard.emit(DATA);
     await flush();
     expect(el.shadowRoot.querySelectorAll("button")).toHaveLength(0);
+    expect(el.shadowRoot.querySelectorAll("select")).toHaveLength(1);
+  });
+
+  describe("zone picker", () => {
+    const zoneSelect = (el) =>
+      el.shadowRoot.querySelector(".zone-pick-select");
+
+    it("lists every zone from the User.Zone__c picklist", async () => {
+      const el = mount("");
+      getPicklistValues.emit({
+        values: [{ value: "Zone 1" }, { value: "Zone 2" }]
+      });
+      await flush();
+      const values = [...zoneSelect(el).querySelectorAll("option")]
+        .map((o) => o.value)
+        .filter(Boolean);
+      expect(values).toEqual(["Zone 1", "Zone 2"]);
+    });
+
+    it("switches zone, reloads for it and remembers the choice", async () => {
+      const el = mount("Zone 1");
+      getDashboard.emit(DATA);
+      getPicklistValues.emit({
+        values: [{ value: "Zone 1" }, { value: "Zone 2" }]
+      });
+      await flush();
+      const select = zoneSelect(el);
+      select.value = "Zone 2";
+      select.dispatchEvent(new CustomEvent("change"));
+      await flush();
+      expect(getDashboard.getLastConfig()).toEqual({ zone: "Zone 2" });
+      expect(window.localStorage.getItem("gsquareArenaTv.zone")).toBe("Zone 2");
+      expect(text(el, ".notice")).toBe("Loading Zone 2");
+    });
+
+    it("uses the remembered zone after a reload", async () => {
+      window.localStorage.setItem("gsquareArenaTv.zone", "Zone 2");
+      mount("");
+      await flush();
+      expect(getDashboard.getLastConfig()).toEqual({ zone: "Zone 2" });
+    });
+
+    it("ignores bookings until a zone is chosen", async () => {
+      mount("");
+      await flush();
+      bookingHandler({
+        data: { payload: { Opportunity_Id__c: "o1", Zone__c: "Zone 1" } }
+      });
+      jest.advanceTimersByTime(1000);
+      await flush();
+      expect(document.body.firstChild.shadowRoot.querySelector("c-gsquare-arena-takeover")).toBeNull();
+    });
   });
 });

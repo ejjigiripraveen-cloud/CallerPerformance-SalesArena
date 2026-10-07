@@ -4,7 +4,7 @@
     <isExposed>true</isExposed>
     <masterLabel>G Square Sales Arena WallTV V2</masterLabel>
     <description
-  >Zone TV wall. Set Zone to the User.Zone__c value this screen shows. Field mapping lives in GSquareSalesArenaWrapperWallTV_V2.cls.</description>
+  >Zone TV wall. Pick the zone from the top-right menu (remembered per browser), or preset Zone on a Lightning page. Field mapping lives in GSquareSalesArenaWrapperWallTV_V2.cls.</description>
     <targets>
         <target>lightning__AppPage</target>
         <target>lightning__HomePage</target>

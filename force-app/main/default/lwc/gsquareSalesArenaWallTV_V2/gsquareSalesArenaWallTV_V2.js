@@ -2,6 +2,9 @@ import { LightningElement, api, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
 import getDashboard from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard";
 import { subscribe, onError as onEmpError } from "lightning/empApi";
+import { getObjectInfo, getPicklistValues } from "lightning/uiObjectInfoApi";
+import USER_OBJECT from "@salesforce/schema/User";
+import USER_ZONE_FIELD from "@salesforce/schema/User.Zone__c";
 import {
   istParts,
   typicalByNow,
@@ -24,6 +27,8 @@ import {
 } from "c/gsquareArenaLogic";
 
 const BOOKING_CHANNEL = "/event/GSquare_Arena_Booking__e";
+// Each TV's browser remembers its zone across the daily 08:30 reload.
+const ZONE_STORAGE_KEY = "gsquareArenaTv.zone";
 const TAKEOVER_SECONDS = 10;
 const DEFAULT_REFRESH_SECONDS = 180;
 const HERO_KEYS = ["allocation", "svConducted", "booking"];
@@ -36,13 +41,17 @@ const FALLBACK_LABELS = {
 };
 
 /**
- * Sales Arena zone TV wall. One instance per zone TV (Lightning App Page with
- * the `zone` property set). All rules live in c/gsquareArenaLogic; this class
- * owns the wire, the timers and the booking-event subscription. Nothing on
- * the wall is clickable.
+ * Sales Arena zone TV wall. One tab serves every zone: the zone picker in the
+ * top-right corner chooses it (remembered per browser), or a Lightning page
+ * can preset the `zone` property. All rules live in c/gsquareArenaLogic; this
+ * class owns the wire, the timers and the booking-event subscription. The
+ * zone picker is the only control on the wall.
  */
 export default class GsquareSalesArena extends LightningElement {
   @api zone;
+
+  selectedZone;
+  zoneOptions = [];
 
   data;
   people = [];
@@ -78,7 +87,8 @@ export default class GsquareSalesArena extends LightningElement {
     this.lastReloadKey = shouldDailyReload(ist, null) ? ist.dateKey : null;
     // eslint-disable-next-line @lwc/lwc/no-async-operation
     this.tickTimer = setInterval(() => this.tick(), 1000);
-    if (this.zoneParam) this.subscribeToBookings();
+    this.selectedZone = this.readStoredZone();
+    this.subscribeToBookings();
   }
 
   disconnectedCallback() {
@@ -86,13 +96,85 @@ export default class GsquareSalesArena extends LightningElement {
     clearInterval(this.refreshTimer);
   }
 
+  /** The picker's choice wins over a Lightning page's preset zone. */
   get zoneParam() {
-    const z = typeof this.zone === "string" ? this.zone.trim() : "";
-    return z || undefined;
+    const pick = (z) => (typeof z === "string" ? z.trim() : "");
+    return pick(this.selectedZone) || pick(this.zone) || undefined;
   }
 
   get zoneConfigured() {
     return Boolean(this.zoneParam);
+  }
+
+  /* ----------------------------------------------------------- zone picker */
+
+  @wire(getObjectInfo, { objectApiName: USER_OBJECT })
+  userInfo;
+
+  @wire(getPicklistValues, {
+    recordTypeId: "$userInfo.data.defaultRecordTypeId",
+    fieldApiName: USER_ZONE_FIELD
+  })
+  wiredZones({ data, error }) {
+    if (data) this.zoneOptions = data.values.map((v) => v.value);
+    else if (error) console.warn("[Sales Arena] zone list failed", error);
+  }
+
+  get zoneChoices() {
+    return this.zoneOptions.map((z) => ({
+      value: z,
+      selected: z === this.zoneParam
+    }));
+  }
+
+  get noZoneSelected() {
+    return !this.zoneParam;
+  }
+
+  get showZonePicker() {
+    return !this.activeBooking;
+  }
+
+  handleZoneChange(event) {
+    const z = event.target.value;
+    if (!z || z === this.zoneParam) return;
+    this.selectedZone = z;
+    this.storeZone(z);
+    this.resetForZone();
+  }
+
+  /** Nothing from the previous zone carries over; the wire reloads for the new one. */
+  resetForZone() {
+    clearInterval(this.refreshTimer);
+    this.data = undefined;
+    this.wiredResult = undefined;
+    this.people = [];
+    this.prevRanks = new Map();
+    this.currRanks = new Map();
+    this.queue = new TakeoverQueue();
+    this.activeBooking = null;
+    this.celebratedByCaller = new Map();
+    this.zoneBookingsToday = 0;
+    this.zoneBookingsMtd = 0;
+    this.cycle = 0;
+    this.sceneIndex = 0;
+    this.sceneElapsed = 0;
+  }
+
+  readStoredZone() {
+    try {
+      return window.localStorage.getItem(ZONE_STORAGE_KEY) || undefined;
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  storeZone(z) {
+    try {
+      window.localStorage.setItem(ZONE_STORAGE_KEY, z);
+    } catch (e) {
+      // storage blocked: the choice lasts until the next reload
+    }
   }
 
   /* ----------------------------------------------------------------- data */
@@ -175,6 +257,7 @@ export default class GsquareSalesArena extends LightningElement {
   }
 
   onBookingEvent(msg) {
+    if (!this.zoneParam) return; // no zone chosen yet: nothing on screen to celebrate
     const p = (msg && msg.data && msg.data.payload) || {};
     this.enqueueBooking({
       opportunityId: p.Opportunity_Id__c,

@@ -103,6 +103,37 @@
   font-size: 4cqh;
   color: var(--arena-sub);
 }
+/* Zone picker: top-right corner, dimmed so it never competes with the boards. */
+.zone-pick {
+  position: absolute;
+  top: 1cqh;
+  right: 1cqw;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.6cqw;
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+.zone-pick:hover,
+.zone-pick:focus-within {
+  opacity: 1;
+}
+.zone-pick-label {
+  font-size: 1.5cqh;
+  color: var(--arena-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.zone-pick-select {
+  font-size: 1.8cqh;
+  padding: 0.4cqh 0.8cqw;
+  color: var(--arena-text);
+  background: var(--arena-panel2);
+  border: 1px solid var(--arena-faint);
+  border-radius: 0.6cqh;
+  cursor: pointer;
+}
 @media (prefers-reduced-motion: reduce) {
   .screen {
     transition: none;
