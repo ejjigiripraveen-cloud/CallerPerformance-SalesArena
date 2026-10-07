@@ -35,7 +35,19 @@
   inset: 0;
   display: grid;
   grid-template-rows: 35fr 55fr 10fr;
+  /* never wider than the TV frame, however long a name or the zone list is */
+  grid-template-columns: minmax(0, 1fr);
   transition: filter 0.6s;
+}
+.band-hero,
+.band-race {
+  display: block;
+  min-width: 0;
+}
+/* leaves a strip at the top so the zone picker never covers a tile */
+.band-hero {
+  padding-top: 4cqh;
+  box-sizing: border-box;
 }
 .tv.dim .screen {
   filter: brightness(0.18);

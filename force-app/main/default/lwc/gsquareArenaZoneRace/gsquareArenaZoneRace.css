@@ -1,14 +1,17 @@
 .race {
   height: 100%;
   display: flex;
+  flex-wrap: wrap; /* 12 zones wrap to a second line instead of widening the page */
   align-items: center;
-  gap: 3cqh;
+  align-content: center;
+  gap: 0.4cqh 2.4cqh;
   padding: 0 2.2cqh;
   border-top: 1px solid var(--arena-panel2);
-  font-size: 2.8cqh;
+  font-size: 2.4cqh;
   color: var(--arena-sub);
   overflow: hidden;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 .lbl {
   color: var(--arena-text);

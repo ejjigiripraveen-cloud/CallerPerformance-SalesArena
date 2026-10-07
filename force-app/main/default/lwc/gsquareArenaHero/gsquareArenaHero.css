@@ -1,7 +1,7 @@
 .hero {
   height: 100%;
   display: grid;
-  grid-template-columns: 1.05fr 1fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1.05fr) repeat(3, minmax(0, 1fr));
   gap: 1.6cqh;
   padding: 2cqh 2.2cqh 1.6cqh;
   box-sizing: border-box;

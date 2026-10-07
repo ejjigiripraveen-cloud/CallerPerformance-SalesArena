@@ -9,21 +9,23 @@
 .board {
   height: 100%;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1cqh 2.4cqh;
 }
 .board.bottom {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 .col {
   display: grid;
   grid-template-rows: repeat(5, 1fr);
   gap: 1cqh;
   min-height: 0;
+  min-width: 0;
 }
 .row {
   display: grid;
-  grid-template-columns: 4.5cqh 6.4cqh 1fr auto 9cqh;
+  /* minmax(0, …): a long name truncates with "…" instead of widening the board */
+  grid-template-columns: 4.5cqh 6.4cqh minmax(0, 1fr) auto 9cqh;
   align-items: center;
   gap: 1.4cqh;
   background: var(--arena-panel);
