@@ -1,68 +1,278 @@
 <template>
-  <div class={tvClass}>
-    <template lwc:if={isReady}>
-      <div class="screen" style={screenStyle}>
-        <c-gsquare-arena-hero
-          class="band-hero"
-          zone-name={zoneName}
-          clock-text={clockText}
-          ampm={ampm}
-          date-text={dateText}
-          tiles={heroTiles}
-          updated-text={updatedText}
-          stale-state={staleState}
-        ></c-gsquare-arena-hero>
-        <div class="scene">
-          <div class="shead">
-            <div class="stitle">{sceneTitle}</div>
-            <div class="ssub">{sceneSubtitle}</div>
-            <div class="dots">
-              <template for:each={progressDots} for:item="d">
-                <i key={d.key} class={d.cls}></i>
-              </template>
+    <div class="stage">
+
+        <!-- LOADING -->
+        <template if:true={loading}>
+            <div class="state-msg">Loading Tele Arena&hellip;</div>
+        </template>
+
+        <!-- ERROR -->
+        <template if:true={error}>
+            <div class="state-msg error">
+                <div class="state-title">Data unavailable</div>
+                <div class="state-detail">{error}</div>
             </div>
-          </div>
-          <div class="bar"><b style={progressStyle}></b></div>
-          <div class="sbody">
-            <template lwc:if={isBoardScene}>
-              <c-gsquare-arena-board
-                rows={boardRows}
-                variant={boardVariant}
-                unit={boardUnit}
-              ></c-gsquare-arena-board>
+        </template>
+
+        <template if:true={data}>
+            <!-- TOP BAR -->
+            <div class="topbar">
+                <div class="brand">
+                    <div class="brand-mark">GS</div>
+                    <div>
+                        <h1>G SQUARE TELE ARENA</h1>
+                        <div class="brand-sub">Live Performance Command Center</div>
+                    </div>
+                </div>
+                <div class="top-right">
+                    <div class="live-pill"><span class="live-dot"></span><span>LIVE</span></div>
+                    <div class="clock-block">
+                        <div class="time">{clockText} IST</div>
+                        <div class="updated">LAST UPDATED <b>{lastUpdatedText}</b></div>
+                        <template if:true={isStale}>
+                            <div class="stale-indicator">&#9888; Stale data &mdash; last updated {staleSinceText}</div>
+                        </template>
+                    </div>
+                    <button
+    class="fullscreen-btn"
+    onclick={openFullScreen}
+    title="Full Screen">
+    ⛶
+</button>
+                    <button class="date-range-btn" onclick={handleDateRangeToggle} title="Switch KPIs and leaderboards between Today (FTD) and This Month (MTD). Critical Alert and Watchlist always stay on today's numbers.">
+                        <template if:true={isMonthMode}>&#128197; MTD</template>
+                        <template if:false={isMonthMode}>&#128197; FTD</template>
+                    </button>
+                    <button class="pause-btn" onclick={handlePauseToggle} title="Pause/resume the leaderboard rotation">
+                        <template if:true={isPaused}>&#9654; Resume</template>
+                        <template if:false={isPaused}>&#10074;&#10074; Pause</template>
+                    </button>
+                    <template if:true={isPaused}>
+                        <button class="mode-toggle-btn" onclick={handleModeToggle} title="Manually switch between Top and Bottom performers while paused">
+                            <template if:true={isBottomMode}>&#8593; Show Top</template>
+                            <template if:false={isBottomMode}>&#8595; Show Bottom</template>
+                        </button>
+                    </template>
+                    <button class="export-btn" onclick={handleExportClick} title="Download an Excel workbook: Allocation, SV Scheduled, SV Conducted, Booking">
+                        &#8681; Export
+                    </button>
+                    <template if:true={hasCriticalEntries}>
+                        <button class="critical-export-btn" onclick={handleCriticalExportClick} title="Download only the people currently on the Watchlist, with TL/Manager/Head names and today's performance">
+                            &#9888; Critical List
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- FILTERS -- Zone is independent; Head/Manager/TL cascade -->
+            <div class="filter-bar">
+                <select class="filter-select" onchange={handleZoneChange}>
+                    <template for:each={zoneOptions} for:item="opt">
+                        <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                    </template>
+                </select>
+                <select class="filter-select" onchange={handleHeadChange}>
+                    <template for:each={headOptions} for:item="opt">
+                        <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                    </template>
+                </select>
+                <select class="filter-select" onchange={handleManagerChange}>
+                    <template for:each={managerOptions} for:item="opt">
+                        <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                    </template>
+                </select>
+                <select class="filter-select" onchange={handleTlChange}>
+                    <template for:each={tlOptions} for:item="opt">
+                        <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                    </template>
+                </select>
+                <template if:true={hasActiveFilter}>
+                    <button class="filter-reset-btn" onclick={handleResetFilters}>&times; Clear Filters</button>
+                </template>
+            </div>
+
+            <!-- FUNNEL STRIP -- one interleaved row: card, connector, card,
+                 connector, card, connector, card. Matches the originally
+                 approved HTML design; previously this was two separate
+                 stacked rows with only one connector surviving. -->
+            <div class="kpi-strip">
+                <template for:each={funnelStrip} for:item="item">
+                    <template if:true={item.isCard}>
+                        <div key={item.key} class={item.cssClass}>
+                            <div class="kpi-top">
+                                <div class="kpi-label">{item.label}</div>
+                                <div class="kpi-value">{item.value}</div>
+                            </div>
+                            <div class="kpi-icon">{item.icon}</div>
+                        </div>
+                    </template>
+                    <template if:false={item.isCard}>
+                        <div key={item.key} class={item.cssClass}>
+                            <div class="fl-arrow">{item.arrow}</div>
+                            <template if:true={item.pct}>
+                                <div class="fl-pct">{item.pct}</div>
+                            </template>
+                            <div class="fl-label">{item.label}</div>
+                        </div>
+                    </template>
+                </template>
+            </div>
+
+            <!-- INSIGHTS -->
+            <div class="insights">
+                <template for:each={insightCards} for:item="ins">
+                    <div key={ins.key} class={ins.cssClass}>
+                        <div class="insight-top">
+                            <div class="insight-tag">{ins.label}</div>
+                            <div class="insight-name">{ins.name}</div>
+                            <div class="insight-metric">{ins.metric}</div>
+                        </div>
+                        <div class="insight-icon">{ins.icon}</div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- ARENA -->
+            <div class="arena">
+                <div class="tier-header">
+                    <div class="tier-title-wrap">
+                        <div class="tier-title">{tierLabel}</div>
+                        <template if:true={isMonthMode}>
+                            <span class="range-badge">MONTH TO DATE</span>
+                        </template>
+                        <template if:true={isTeamTier}>
+                            <div class="team-context">
+                                TEAM <b>{currentTeamTl}</b>
+                                <span class="tc-count">{teamMeta}</span>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="tier-timer">
+                        <div class="tier-timer-bar">
+                            <div class="tier-timer-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOARDS: one per configured metric, in config order -->
+                <div class="boards">
+                    <template for:each={boards} for:item="b">
+                        <div key={b.key} class={b.cssClass}>
+                            <div class="board-head">
+                                <div class="board-title">
+                                    {b.label}
+                                    <template if:true={b.qualifier}>
+                                        <span class="bq">{b.qualifier}</span>
+                                    </template>
+                                </div>
+                                <div class="board-total">{b.total}</div>
+                            </div>
+                            <div class="rows">
+                                <template if:true={b.hasRows}>
+                                    <template for:each={b.rows} for:item="r">
+                                        <div key={r.key} class={r.rankClass}>
+                                            <div class="rank">{r.rank}</div>
+                                            <div class="rname">
+                                                {r.name}
+                                                <template if:true={r.subLabel}>
+                                                    <span class="rsub">{r.subLabel}</span>
+                                                </template>
+                                            </div>
+                                            <div class="rval">{r.value}</div>
+                                            <div class={r.gapClass}>{r.gap}</div>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template if:false={b.hasRows}>
+                                    <div class="empty-row">{b.emptyText}</div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- ALERT POPUP (fixed, never overlaps KPI cards) -->
+            <template if:true={alertVisible}>
+                <div class={alertClass}>
+                    <div class="alert-top">
+                        <div class="alert-badge">{alertBadge}</div>
+                    </div>
+                    <div class="alert-top-row">
+                        <div class="alert-name">{activeAlert.name} <span class="alert-tl">|| {activeAlert.tlName}</span></div>
+                        <template if:true={isPositiveAlert}>
+                            <div class="alert-value-big">{alertSub}</div>
+                        </template>
+                    </div>
+                    <template if:false={isPositiveAlert}>
+                    <div class="alert-sub">{alertSub}</div>
+                    </template>
+                    <div class="alert-chip-row">
+                        <template for:each={alertChips} for:item="chip">
+                            <span key={chip.key} class="alert-chip">{chip.text}</span>
+                        </template>
+                    </div>
+                </div>
             </template>
-            <template lwc:elseif={isTeamScene}>
-              <c-gsquare-arena-team-table
-                rows={teamTableRows}
-                show-pace={showPace}
-              ></c-gsquare-arena-team-table>
+
+            <!-- MANAGER / HEAD OVERLAY (inlined -- was a separate
+                 salesArenaOverlay component; consolidated into this single
+                 bundle per the requested structure). -->
+            <template if:true={overlayVisible}>
+                <!-- <div class="overlay"> -->
+                    <div class={overlayCssClass}>
+                    <div class="ov-head">
+                        <div>
+                            <div class="ov-title">{overlayTitle}</div>
+                            <div class="ov-sub">{overlaySubtitle}</div>
+                        </div>
+                        <button class="ov-close" onclick={handleOverlayClose}>&times;</button>
+                    </div>
+
+                    <template if:true={overlayHasConfigError}>
+                        <div class="ov-config-error">{overlayConfigErrorMessage}</div>
+                    </template>
+
+                    <template if:false={overlayHasConfigError}>
+                    <table class="ov-table">
+                        <thead>
+                            <tr>
+                                <th class="w46"></th>
+                                <th class="left">Name</th>
+                                <th>{overlaySubLabel}</th>
+                                <th>Callers</th>
+                                <template for:each={overlayColumns} for:item="c">
+                                    <th key={c.key}>{c.label}</th>
+                                </template>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={overlayRows} for:item="r">
+                                <tr key={r.key} class={r.rowClass}>
+                                    <td class="rank">{r.rank}</td>
+                                    <td class="name">{r.name}</td>
+                                    <td class="size">{r.subCount}</td>
+                                    <td class="size">{r.count}</td>
+                                    <template for:each={r.cells} for:item="c">
+                                        <td key={c.key} class={c.cssClass}>{c.text}</td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    </template>
+                    <div class="ov-note">{overlayNote}</div>
+                </div>
             </template>
-            <template lwc:elseif={isWatchlistScene}>
-              <c-gsquare-arena-watchlist
-                rows={watchRows}
-              ></c-gsquare-arena-watchlist>
+
+            <!-- CONFIG WARNINGS -->
+            <template if:true={hasWarnings}>
+                <div class="warn-strip">
+                    <template for:each={warningItems} for:item="w">
+                        <span key={w.key} class="warn-item">{w.text}</span>
+                    </template>
+                </div>
             </template>
-          </div>
-        </div>
-        <c-gsquare-arena-zone-race
-          class="band-race"
-          entries={raceEntries}
-          current-zone={zoneParam}
-        ></c-gsquare-arena-zone-race>
-      </div>
-      <template lwc:if={activeBooking}>
-        <c-gsquare-arena-takeover
-          booking={activeBooking}
-        ></c-gsquare-arena-takeover>
-      </template>
-    </template>
-    <template lwc:elseif={isLoading}>
-      <div class="notice">Loading {zoneParam}</div>
-    </template>
-    <template lwc:else>
-      <div class="notice">
-        Zone not configured. Set the Zone property on this Lightning page.
-      </div>
-    </template>
-  </div>
+        </template>
+    </div>
 </template>

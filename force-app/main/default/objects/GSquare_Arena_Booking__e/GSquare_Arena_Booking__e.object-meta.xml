@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
-    <deploymentStatus>Deployed</deploymentStatus>
-    <description>Published when an Opportunity becomes a booking today; the Sales Arena zone TVs show a full-screen celebration.</description>
-    <eventType>HighVolume</eventType>
-    <label>Arena Booking</label>
-    <pluralLabel>Arena Bookings</pluralLabel>
-    <publishBehavior>PublishAfterCommit</publishBehavior>
-</CustomObject>

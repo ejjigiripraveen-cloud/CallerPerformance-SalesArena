@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Weekday__c</fullName>
-    <label>Weekday</label>
-    <type>Number</type>
-    <precision>1</precision>
-    <scale>0</scale>
-    <description>1 = Monday ... 7 = Sunday (HOURLY rows).</description>
-</CustomField>

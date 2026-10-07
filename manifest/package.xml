@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
-        <members>GSquareArenaBaselineJob</members>
-        <members>GSquareArenaBaselineJobTest</members>
-        <members>GSquareArenaBookingEvents</members>
-        <members>GSquareArenaBookingEventsTest</members>
-        <members>GSquareArenaTestData</members>
         <members>GSquareSalesArenaController</members>
         <members>GSquareSalesArenaControllerTest</members>
         <members>GSquareSalesArenaService</members>
@@ -13,10 +8,6 @@
         <members>GSquareSalesArenaWrapper</members>
         <members>GSquareSalesArenaWrapperTest</members>
         <name>ApexClass</name>
-    </types>
-    <types>
-        <members>GSquareArenaBookingTrigger</members>
-        <name>ApexTrigger</name>
     </types>
     <types>
         <members>GSquareSalesArenaMetric__mdt.Aggregate_Type__c</members>
@@ -39,48 +30,19 @@
         <members>GSquareSalesArenaMetric__mdt.Status_Values__c</members>
         <members>GSquareSalesArenaMetric__mdt.Unit__c</members>
         <members>GSquareSalesArenaMetric__mdt.Value_Field_API__c</members>
-        <members>GSquare_Arena_Baseline__c.Day_Of_Month__c</members>
-        <members>GSquare_Arena_Baseline__c.Hour__c</members>
-        <members>GSquare_Arena_Baseline__c.Kind__c</members>
-        <members>GSquare_Arena_Baseline__c.Metric_Key__c</members>
-        <members>GSquare_Arena_Baseline__c.Scope_Key__c</members>
-        <members>GSquare_Arena_Baseline__c.Unique_Key__c</members>
-        <members>GSquare_Arena_Baseline__c.Value__c</members>
-        <members>GSquare_Arena_Baseline__c.Weekday__c</members>
-        <members>GSquare_Arena_Booking__e.Caller_Id__c</members>
-        <members>GSquare_Arena_Booking__e.Caller_Initials__c</members>
-        <members>GSquare_Arena_Booking__e.Caller_Name__c</members>
-        <members>GSquare_Arena_Booking__e.Opportunity_Id__c</members>
-        <members>GSquare_Arena_Booking__e.Photo_Url__c</members>
-        <members>GSquare_Arena_Booking__e.Project__c</members>
-        <members>GSquare_Arena_Booking__e.Tl_Name__c</members>
-        <members>GSquare_Arena_Booking__e.Zone__c</members>
         <name>CustomField</name>
     </types>
     <types>
         <members>GSquareSalesArenaMetric__mdt</members>
-        <members>GSquare_Arena_Baseline__c</members>
-        <members>GSquare_Arena_Booking__e</members>
         <name>CustomObject</name>
     </types>
     <types>
-        <members>Caller_Performace</members>
+        <members>Caller_Performance</members>
         <name>CustomTab</name>
     </types>
     <types>
-        <members>gsquareArenaBoard</members>
-        <members>gsquareArenaHero</members>
-        <members>gsquareArenaLogic</members>
-        <members>gsquareArenaTakeover</members>
-        <members>gsquareArenaTeamTable</members>
-        <members>gsquareArenaWatchlist</members>
-        <members>gsquareArenaZoneRace</members>
         <members>gsquareSalesArena</members>
         <name>LightningComponentBundle</name>
-    </types>
-    <types>
-        <members>GSquare_Arena_TV</members>
-        <name>PermissionSet</name>
     </types>
     <version>66.0</version>
 </Package>

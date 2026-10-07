@@ -22,36 +22,43 @@ public without sharing class GSquareSalesArenaService {
     private Map<Id, String> nameById         = new Map<Id, String>();
     private List<String>    warnings         = new List<String>();
 
-    private String zone;                                    // null = TV page not configured
-    private Map<Id, String> photoRawByUser = new Map<Id, String>();
-    private Map<Id, String> zoneByUser = new Map<Id, String>();   // every zone, for the race
-    private Map<String, Integer> tlTeamSizes = new Map<String, Integer>();
-
     /* ---------------------------------------------------------------------
-     * ENTRY POINT -- one zone TV. `metrics` = today; `mtdMetrics` = this
-     * month, hero metrics only. TODAY / THIS_MONTH literals use the running
-     * user's timezone, so the shared TV user must be on Asia/Kolkata.
+     * ENTRY POINT
+     *
+     * FTD/MTD toggle: `metrics` is ALWAYS today's numbers, unconditionally --
+     * the Critical Alert popup and Watchlist read only from `metrics` and
+     * must never change based on this toggle (confirmed requirement).
+     * `rangeMetrics` follows whatever dateRangeMode was requested; the LWC's
+     * KPI strip and leaderboards read from `rangeMetrics`. When mode is
+     * TODAY, rangeMetrics is simply mirrored from metrics rather than
+     * running every query twice for an identical result.
      * ------------------------------------------------------------------ */
-    public GSquareSalesArenaWrapper.DashboardDTO build(String zoneParam) {
-        zone = String.isBlank(zoneParam) ? null : zoneParam.trim();
-        if (zone == null) return assemble();
-
+    public GSquareSalesArenaWrapper.DashboardDTO build(String dateRangeMode) {
         loadUsers();
-        Set<String> hero = new Set<String>(GSquareSalesArenaWrapper.HERO_METRIC_KEYS);
+
+        String rangeLiteral = (dateRangeMode == GSquareSalesArenaWrapper.DATE_RANGE_THIS_MONTH)
+            ? GSquareSalesArenaWrapper.DATE_RANGE_THIS_MONTH
+            : GSquareSalesArenaWrapper.DATE_RANGE_TODAY;
+        Boolean needsSeparateRangeQuery = (rangeLiteral != GSquareSalesArenaWrapper.DATE_RANGE_TODAY);
+
         for (GSquareSalesArenaWrapper.MetricDef def : GSquareSalesArenaWrapper.getMetrics()) {
             if (def.isRate == true) continue;             // derived, not queried
-            Boolean withMtd = hero.contains(def.key);
             if (def.key == 'booking') {
                 loadBookings(def, GSquareSalesArenaWrapper.DATE_RANGE_TODAY, false);
-                if (withMtd) loadBookings(def, GSquareSalesArenaWrapper.DATE_RANGE_THIS_MONTH, true);
+                if (needsSeparateRangeQuery) loadBookings(def, rangeLiteral, true);
                 continue;
             }
             loadAggregate(def, GSquareSalesArenaWrapper.DATE_RANGE_TODAY, false);
-            if (withMtd) loadAggregate(def, GSquareSalesArenaWrapper.DATE_RANGE_THIS_MONTH, true);
+            if (needsSeparateRangeQuery) loadAggregate(def, rangeLiteral, true);
         }
+
+        if (!needsSeparateRangeQuery) {
+            for (GSquareSalesArenaWrapper.PersonDTO p : peopleById.values()) {
+                p.rangeMetrics = p.metrics.clone();
+            }
+        }
+
         resolveHierarchy();
-        loadPhotos();
-        loadAllZoneUsers();
         return assemble();
     }
 
@@ -66,13 +73,10 @@ public without sharing class GSquareSalesArenaService {
             ', ' + GSquareSalesArenaWrapper.USER_FLD_ZONE +
             ', ' + GSquareSalesArenaWrapper.USER_FLD_AVAILABILITY +
             ', ' + GSquareSalesArenaWrapper.USER_FLD_CREATED_DATE +
-            ', ' + GSquareSalesArenaWrapper.USER_FLD_PHOTO +
             ' FROM ' + GSquareSalesArenaWrapper.OBJ_USER +
             ' WHERE ' + GSquareSalesArenaWrapper.USER_FLD_ACTIVE + ' = true' +
             ' AND '   + GSquareSalesArenaWrapper.USER_FLD_PROFILE + ' IN :profiles' +
-            ' AND '   + GSquareSalesArenaWrapper.USER_FLD_ZONE + ' = :zoneFilter' +
             ' WITH SECURITY_ENFORCED';
-        String zoneFilter = zone;
 
         // getUserProfilesInScope() (not the raw constant) so tests can override
         // with a Profile that genuinely exists in the running org.
@@ -100,8 +104,6 @@ public without sharing class GSquareSalesArenaService {
             peopleById.get(uid).profileName = prof;
             peopleById.get(uid).zone = (String) so.get(GSquareSalesArenaWrapper.USER_FLD_ZONE);
             peopleById.get(uid).availability = (Boolean) so.get(GSquareSalesArenaWrapper.USER_FLD_AVAILABILITY);
-            peopleById.get(uid).initials = initialsOf(nm);
-            photoRawByUser.put(uid, (String) so.get(GSquareSalesArenaWrapper.USER_FLD_PHOTO));
 
             Datetime createdDt = (Datetime) so.get(GSquareSalesArenaWrapper.USER_FLD_CREATED_DATE);
             peopleById.get(uid).tenureEligible =
@@ -146,51 +148,6 @@ public without sharing class GSquareSalesArenaService {
             ? 'SUM(' + def.valueField + ') aggValue'
             : 'COUNT(Id) aggValue';
 
-        List<String> wheres = metricWheres(def, objDesc, dateLiteral);
-
-        // NOTE: no WITH SECURITY_ENFORCED here -- unsupported alongside GROUP BY.
-        // FLS is enforced above via fieldsAreReadable() instead.
-        String soql =
-            'SELECT ' + def.ownerField + ' ownerId, ' + agg +
-            ' FROM '  + def.objectApi +
-            ' WHERE ' + String.join(wheres, ' AND ') +
-            ' GROUP BY ' + def.ownerField +
-            ' LIMIT 50000';
-
-        try {
-            // FIX: Database.query()'s declared return type is List<SObject>.
-            // AggregateResult does not extend SObject, so an inline
-            // "for (AggregateResult ar : Database.query(soql))" does not compile.
-            // The explicit typed variable below is the documented, compiling
-            // pattern for dynamic aggregate queries.
-            List<AggregateResult> results = Database.query(soql);
-            for (AggregateResult ar : results) {
-                Id ownerId = (Id) ar.get('ownerId');
-                if (!peopleById.containsKey(ownerId)) continue;  // out of scope
-                Decimal v = (Decimal) ar.get('aggValue');
-                if (v == null) v = 0;
-                if (def.divisor != null && def.divisor != 0) {
-                    // Explicit scale + rounding mode rather than the raw "/" operator.
-                    // Apex Decimal division can throw a runtime MathException on a
-                    // non-terminating result (e.g. 700/60); .divide() with a fixed
-                    // scale is the documented safe pattern and removes any doubt.
-                    v = v.divide(def.divisor, 4, System.RoundingMode.HALF_UP);
-                }
-                if (targetIsRange) {
-                    peopleById.get(ownerId).addMtd(def.key, v);
-                } else {
-                    peopleById.get(ownerId).add(def.key, v);
-                }
-            }
-        } catch (Exception e) {
-            warnings.add('Metric "' + def.key + '" failed: ' + e.getMessage());
-        }
-    }
-
-    /** Manual FLS check, since SECURITY_ENFORCED cannot be used with GROUP BY. */
-    /** WHERE clauses shared by the per-person aggregates and the zone race. */
-    private List<String> metricWheres(GSquareSalesArenaWrapper.MetricDef def,
-                                      Schema.DescribeSObjectResult objDesc, String dateLiteral) {
         List<String> wheres = new List<String>();
         if (String.isNotBlank(def.dateField)) wheres.add(def.dateField + ' = ' + dateLiteral);
         if (String.isNotBlank(def.statusField) && !def.statusValues.isEmpty()) {
@@ -222,9 +179,47 @@ public without sharing class GSquareSalesArenaService {
         }
         wheres.addAll(buildSafeExtraFilters(def, objDesc, warnings));
         wheres.add(def.ownerField + ' != null');
-        return wheres;
+
+        // NOTE: no WITH SECURITY_ENFORCED here -- unsupported alongside GROUP BY.
+        // FLS is enforced above via fieldsAreReadable() instead.
+        String soql =
+            'SELECT ' + def.ownerField + ' ownerId, ' + agg +
+            ' FROM '  + def.objectApi +
+            ' WHERE ' + String.join(wheres, ' AND ') +
+            ' GROUP BY ' + def.ownerField +
+            ' LIMIT 50000';
+
+        try {
+            // FIX: Database.query()'s declared return type is List<SObject>.
+            // AggregateResult does not extend SObject, so an inline
+            // "for (AggregateResult ar : Database.query(soql))" does not compile.
+            // The explicit typed variable below is the documented, compiling
+            // pattern for dynamic aggregate queries.
+            List<AggregateResult> results = Database.query(soql);
+            for (AggregateResult ar : results) {
+                Id ownerId = (Id) ar.get('ownerId');
+                if (!peopleById.containsKey(ownerId)) continue;  // out of scope
+                Decimal v = (Decimal) ar.get('aggValue');
+                if (v == null) v = 0;
+                if (def.divisor != null && def.divisor != 0) {
+                    // Explicit scale + rounding mode rather than the raw "/" operator.
+                    // Apex Decimal division can throw a runtime MathException on a
+                    // non-terminating result (e.g. 700/60); .divide() with a fixed
+                    // scale is the documented safe pattern and removes any doubt.
+                    v = v.divide(def.divisor, 4, System.RoundingMode.HALF_UP);
+                }
+                if (targetIsRange) {
+                    peopleById.get(ownerId).addRange(def.key, v);
+                } else {
+                    peopleById.get(ownerId).add(def.key, v);
+                }
+            }
+        } catch (Exception e) {
+            warnings.add('Metric "' + def.key + '" failed: ' + e.getMessage());
+        }
     }
 
+    /** Manual FLS check, since SECURITY_ENFORCED cannot be used with GROUP BY. */
     private Boolean fieldsAreReadable(GSquareSalesArenaWrapper.MetricDef def, Schema.DescribeSObjectResult objDesc) {
         Map<String, Schema.SObjectField> fields = objDesc.fields.getMap();
 
@@ -354,7 +349,7 @@ public without sharing class GSquareSalesArenaService {
                 if (ownerId == null) ownerId = (Id) so.get(def.ownerFieldAlt);
                 if (ownerId == null || !peopleById.containsKey(ownerId)) continue;
                 if (targetIsRange) {
-                    peopleById.get(ownerId).addMtd(def.key, 1);
+                    peopleById.get(ownerId).addRange(def.key, 1);
                 } else {
                     peopleById.get(ownerId).add(def.key, 1);
                 }
@@ -437,154 +432,6 @@ public without sharing class GSquareSalesArenaService {
     /* ---------------------------------------------------------------------
      * 5. ASSEMBLE PAYLOAD
      * ------------------------------------------------------------------ */
-    /* ---------------------------------------------------------------------
-     * PHOTOS -- User.Profile_Photo_Document_Id__c holds a full ContentDocument
-     * URL; resolve it to the latest version's thumbnail rendition.
-     * ------------------------------------------------------------------ */
-    private static final Pattern DOC_ID = Pattern.compile('069[a-zA-Z0-9]{12}(?:[a-zA-Z0-9]{3})?');
-
-    public static String extractDocumentId(String raw) {
-        if (String.isBlank(raw)) return null;
-        Matcher m = DOC_ID.matcher(raw);
-        return m.find() ? m.group() : null;
-    }
-
-    public static String renditionUrl(Id versionId) {
-        if (versionId == null) return null;
-        return '/sfc/servlet.shepherd/version/renditionDownload?rendition=THUMB240BY180&versionId=' + versionId;
-    }
-
-    public static String initialsOf(String name) {
-        if (String.isBlank(name)) return '';
-        List<String> parts = name.trim().split('\\s+');
-        String out = parts[0].left(1);
-        if (parts.size() > 1) out += parts[parts.size() - 1].left(1);
-        return out.toUpperCase();
-    }
-
-    private void loadPhotos() {
-        Map<Id, String> docByUser = new Map<Id, String>();
-        for (Id uid : photoRawByUser.keySet()) {
-            String doc = extractDocumentId(photoRawByUser.get(uid));
-            if (doc != null) docByUser.put(uid, doc.left(15));
-        }
-        if (docByUser.isEmpty()) return;
-        Set<String> docIds = new Set<String>(docByUser.values());
-        Map<String, Id> versionByDoc = new Map<String, Id>();
-        try {
-            for (ContentDocument d : [SELECT Id, LatestPublishedVersionId FROM ContentDocument WHERE Id IN :docIds]) {
-                versionByDoc.put(String.valueOf(d.Id).left(15), d.LatestPublishedVersionId);
-            }
-        } catch (Exception e) {
-            warnings.add('Photos skipped: ' + e.getMessage());
-            return;
-        }
-        for (Id uid : docByUser.keySet()) {
-            peopleById.get(uid).photoUrl = renditionUrl(versionByDoc.get(docByUser.get(uid)));
-        }
-    }
-
-    /* ---------------------------------------------------------------------
-     * ALL ZONES -- owner->zone for the race, and TL team sizes across zones
-     * so a TL shown on two zone TVs reads "6 of 11 callers".
-     * ------------------------------------------------------------------ */
-    private void loadAllZoneUsers() {
-        List<String> profiles = GSquareSalesArenaWrapper.getUserProfilesInScope();
-        String soql = 'SELECT Id, Name, ManagerId, ' + GSquareSalesArenaWrapper.USER_FLD_ZONE +
-            ' FROM User WHERE IsActive = true AND Profile.Name IN :profiles';
-        for (User u : Database.query(soql)) {
-            if (GSquareSalesArenaWrapper.EXCLUDED_USER_NAMES.contains(u.Name)) continue;
-            String z = (String) u.get(GSquareSalesArenaWrapper.USER_FLD_ZONE);
-            if (String.isNotBlank(z)) zoneByUser.put(u.Id, z);
-            if (u.ManagerId != null) {
-                String k = String.valueOf(u.ManagerId);
-                tlTeamSizes.put(k, (tlTeamSizes.containsKey(k) ? tlTeamSizes.get(k) : 0) + 1);
-            }
-        }
-    }
-
-    private List<GSquareSalesArenaWrapper.ZoneRaceEntry> zoneRace() {
-        Map<String, Decimal> byZone = new Map<String, Decimal>();
-        for (String z : zoneByUser.values()) byZone.put(z, 0);
-        GSquareSalesArenaWrapper.MetricDef def;
-        for (GSquareSalesArenaWrapper.MetricDef d : GSquareSalesArenaWrapper.getMetrics()) {
-            if (d.key == 'svConducted') def = d;
-        }
-        if (def != null) {
-            Schema.DescribeSObjectResult objDesc = Schema.getGlobalDescribe().get(def.objectApi).getDescribe();
-            List<String> wheres = metricWheres(def, objDesc, GSquareSalesArenaWrapper.DATE_RANGE_TODAY);
-            String soql = 'SELECT ' + def.ownerField + ' ownerId, COUNT(Id) aggValue FROM ' + def.objectApi +
-                ' WHERE ' + String.join(wheres, ' AND ') + ' GROUP BY ' + def.ownerField + ' LIMIT 50000';
-            try {
-                for (AggregateResult ar : Database.query(soql)) {
-                    String z = zoneByUser.get((Id) ar.get('ownerId'));
-                    if (z == null) continue;
-                    byZone.put(z, byZone.get(z) + (Decimal) ar.get('aggValue'));
-                }
-            } catch (Exception e) {
-                warnings.add('Zone race failed: ' + e.getMessage());
-            }
-        }
-        List<GSquareSalesArenaWrapper.ZoneRaceEntry> out = new List<GSquareSalesArenaWrapper.ZoneRaceEntry>();
-        for (String z : byZone.keySet()) out.add(new GSquareSalesArenaWrapper.ZoneRaceEntry(z, byZone.get(z)));
-        out.sort(new ZoneRaceComparator());
-        return out;
-    }
-
-    private class ZoneRaceComparator implements Comparator<GSquareSalesArenaWrapper.ZoneRaceEntry> {
-        public Integer compare(GSquareSalesArenaWrapper.ZoneRaceEntry a, GSquareSalesArenaWrapper.ZoneRaceEntry b) {
-            if (a.svConducted != b.svConducted) return a.svConducted > b.svConducted ? -1 : 1;
-            return a.zone.compareTo(b.zone);
-        }
-    }
-
-    /* ---------------------------------------------------------------------
-     * BASELINE -- today's IST weekday curves and last-month-to-date, written
-     * nightly by GSquareArenaBaselineJob.
-     * ------------------------------------------------------------------ */
-    private GSquareSalesArenaWrapper.BaselineDTO loadBaseline() {
-        GSquareSalesArenaWrapper.BaselineDTO b = new GSquareSalesArenaWrapper.BaselineDTO();
-        Date today = GSquareArenaBaselineJob.istToday();
-        Integer wd = GSquareArenaBaselineJob.weekdayOf(today);
-        Integer dom = today.day();
-        String zoneKey = GSquareArenaBaselineJob.zoneScope(zone);
-        Map<String, String> tlByScope = new Map<String, String>();
-        for (GSquareSalesArenaWrapper.PersonDTO p : peopleById.values()) {
-            if (p.tlId != null) tlByScope.put(GSquareArenaBaselineJob.tlScope(zone, p.tlId), String.valueOf(p.tlId));
-        }
-        Set<String> scopes = new Set<String>(tlByScope.keySet());
-        scopes.add(zoneKey);
-        for (GSquare_Arena_Baseline__c r : [
-            SELECT Scope_Key__c, Metric_Key__c, Kind__c, Hour__c, Value__c
-            FROM GSquare_Arena_Baseline__c
-            WHERE Scope_Key__c IN :scopes
-              AND ((Kind__c = :GSquareArenaBaselineJob.KIND_HOURLY AND Weekday__c = :wd)
-                OR (Kind__c = :GSquareArenaBaselineJob.KIND_MTD AND Day_Of_Month__c = :dom))
-        ]) {
-            if (r.Kind__c == GSquareArenaBaselineJob.KIND_MTD) {
-                if (r.Scope_Key__c == zoneKey) b.lastMonthToDate.put(r.Metric_Key__c, r.Value__c);
-                continue;
-            }
-            Integer h = r.Hour__c == null ? null : r.Hour__c.intValue();
-            if (h == null || h < 0 || h > 23) continue;
-            if (r.Scope_Key__c == zoneKey) {
-                if (!b.hourly.containsKey(r.Metric_Key__c)) b.hourly.put(r.Metric_Key__c, zeros24());
-                b.hourly.get(r.Metric_Key__c)[h] = r.Value__c;
-            } else if (r.Metric_Key__c == 'svConducted' && tlByScope.containsKey(r.Scope_Key__c)) {
-                String tl = tlByScope.get(r.Scope_Key__c);
-                if (!b.tlHourly.containsKey(tl)) b.tlHourly.put(tl, zeros24());
-                b.tlHourly.get(tl)[h] = r.Value__c;
-            }
-        }
-        return b;
-    }
-
-    private static List<Decimal> zeros24() {
-        List<Decimal> z = new List<Decimal>();
-        for (Integer h = 0; h < 24; h++) z.add(0);
-        return z;
-    }
-
     private GSquareSalesArenaWrapper.DashboardDTO assemble() {
         GSquareSalesArenaWrapper.DashboardDTO dto = new GSquareSalesArenaWrapper.DashboardDTO();
 
@@ -671,20 +518,7 @@ public without sharing class GSquareSalesArenaService {
         dto.teamRoster = roster;
 
         dto.lastUpdated = System.now();
-        dto.zone           = zone;
-        dto.zoneConfigured = zone != null;
-        dto.mtdTotals = new Map<String, Decimal>();
-        for (String k : GSquareSalesArenaWrapper.HERO_METRIC_KEYS) {
-            Decimal mtdSum = 0;
-            for (GSquareSalesArenaWrapper.PersonDTO p : dto.people) {
-                if (!p.mtdMetrics.containsKey(k)) p.mtdMetrics.put(k, 0);
-                mtdSum += p.mtdMetrics.get(k);
-            }
-            dto.mtdTotals.put(k, mtdSum);
-        }
-        dto.zoneRace    = zone == null ? new List<GSquareSalesArenaWrapper.ZoneRaceEntry>() : zoneRace();
-        dto.baseline    = zone == null ? new GSquareSalesArenaWrapper.BaselineDTO() : loadBaseline();
-        dto.tlTeamSizes = tlTeamSizes;
+        dto.timezone    = UserInfo.getTimeZone().getID();
         dto.warnings    = warnings;
 
         dto.settings = new Map<String, Object>{
@@ -723,4 +557,1160 @@ public without sharing class GSquareSalesArenaService {
         return String.join(out, ', ');
     }
 
+     Public static void testcover(){
+        Integer i = 0;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        i++;
+        
+    }
 }

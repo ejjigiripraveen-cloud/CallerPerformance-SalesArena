@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Components that exist only in the zone-TV-wall version (caller-perf-local-original).
+     Deleting them returns the sandbox to its pre-deploy state. -->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>GSquareArenaBookingTrigger</members>
+        <name>ApexTrigger</name>
+    </types>
+    <types>
+        <members>GSquareArenaBaselineJob</members>
+        <members>GSquareArenaBaselineJobTest</members>
+        <members>GSquareArenaBookingEvents</members>
+        <members>GSquareArenaBookingEventsTest</members>
+        <members>GSquareArenaTestData</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
+        <members>gsquareArenaBoard</members>
+        <members>gsquareArenaHero</members>
+        <members>gsquareArenaLogic</members>
+        <members>gsquareArenaTakeover</members>
+        <members>gsquareArenaTeamTable</members>
+        <members>gsquareArenaWatchlist</members>
+        <members>gsquareArenaZoneRace</members>
+        <name>LightningComponentBundle</name>
+    </types>
+    <types>
+        <members>GSquare_Arena_TV</members>
+        <name>PermissionSet</name>
+    </types>
+    <types>
+        <members>Caller_Performace</members>
+        <name>CustomTab</name>
+    </types>
+    <types>
+        <members>GSquare_Arena_Baseline__c</members>
+        <members>GSquare_Arena_Booking__e</members>
+        <name>CustomObject</name>
+    </types>
+    <version>66.0</version>
+</Package>
