@@ -105,6 +105,7 @@
 .sbody {
   flex: 1;
   min-height: 0;
+  overflow: hidden; /* a scene can never spill onto the zone race */
 }
 .notice {
   position: absolute;

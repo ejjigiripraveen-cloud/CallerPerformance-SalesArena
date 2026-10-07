@@ -1,4 +1,10 @@
-import { buildPlaylist, BOARD_METRICS } from "c/gsquareArenaLogic";
+import {
+  buildPlaylist,
+  BOARD_METRICS,
+  pageCount,
+  pageIndexAt,
+  pageRows
+} from "c/gsquareArenaLogic";
 
 const total = (pl) => pl.reduce((s, x) => s + x.seconds, 0);
 
@@ -62,5 +68,34 @@ describe("buildPlaylist", () => {
     expect(
       buildPlaylist({ hour: 15 }, 2).some((x) => x.id === "team-leaders")
     ).toBe(false);
+  });
+
+  it("stretches team scenes so each page gets 8 s", () => {
+    const pl = buildPlaylist({ hour: 9 }, 1, { teamPages: 4, leaderPages: 3 });
+    expect(pl.find((x) => x.id === "team-tl").seconds).toBe(32);
+    expect(pl.find((x) => x.id === "team-leaders").seconds).toBe(24);
+    // short tables keep the original minimums
+    const short = buildPlaylist({ hour: 9 }, 1, { teamPages: 1, leaderPages: 2 });
+    expect(short.find((x) => x.id === "team-tl").seconds).toBe(25);
+    expect(short.find((x) => x.id === "team-leaders").seconds).toBe(20);
+  });
+});
+
+describe("team table paging", () => {
+  const rows = Array.from({ length: 14 }, (_, i) => ({ id: `t${i}` }));
+
+  it("splits into pages of 6", () => {
+    expect(pageCount(0)).toBe(1);
+    expect(pageCount(6)).toBe(1);
+    expect(pageCount(14)).toBe(3);
+    expect(pageRows(rows, 2).map((r) => r.id)).toEqual(["t12", "t13"]);
+  });
+
+  it("walks the pages evenly across the scene", () => {
+    expect(pageIndexAt(0, 25, 3)).toBe(0);
+    expect(pageIndexAt(9, 25, 3)).toBe(1);
+    expect(pageIndexAt(24, 25, 3)).toBe(2);
+    expect(pageIndexAt(99, 25, 3)).toBe(2);
+    expect(pageIndexAt(10, 25, 1)).toBe(0);
   });
 });

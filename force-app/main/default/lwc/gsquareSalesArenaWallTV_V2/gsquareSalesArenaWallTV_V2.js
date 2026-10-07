@@ -10,6 +10,9 @@ import {
   paceState,
   mtdState,
   buildPlaylist,
+  pageCount,
+  pageIndexAt,
+  pageRows,
   topRows,
   bottomRows,
   teamRows,
@@ -451,7 +454,7 @@ export default class GsquareSalesArena extends LightningElement {
     }
     if (!this.data) return;
 
-    const playlist = buildPlaylist(ist, this.cycle);
+    const playlist = buildPlaylist(ist, this.cycle, this.teamPageCounts);
     if (this.sceneIndex >= playlist.length) this.sceneIndex = 0;
     this.sceneElapsed += 1;
     if (this.sceneElapsed >= playlist[this.sceneIndex].seconds) {
@@ -550,7 +553,26 @@ export default class GsquareSalesArena extends LightningElement {
   /* ----------------------------------------------------------- view: scene */
 
   get playlist() {
-    return buildPlaylist(this.ist, this.cycle);
+    return buildPlaylist(this.ist, this.cycle, this.teamPageCounts);
+  }
+
+  get teamPageCounts() {
+    return {
+      teamPages: pageCount(this.tlRows.length),
+      leaderPages: pageCount(this.leaderRows.length)
+    };
+  }
+
+  /** Which page of the current team table is on screen, and of how many. */
+  get teamPage() {
+    const s = this.scene;
+    const rows = s.kind === "leaders" ? this.leaderRows : this.tlRows;
+    const pages = pageCount(rows.length);
+    return {
+      rows,
+      pages,
+      index: pageIndexAt(this.sceneElapsed, s.seconds, pages)
+    };
   }
 
   get scene() {
@@ -574,7 +596,9 @@ export default class GsquareSalesArena extends LightningElement {
       const n = ((this.data && this.data.settings) || {}).watchlistMinWeak || 3;
       return `Below the zone average on ${n} or more measures`;
     }
-    return `Today in ${this.zoneParam}`;
+    const today = `Today in ${this.zoneParam}`;
+    const { pages, index } = this.teamPage;
+    return pages > 1 ? `${today} · page ${index + 1} of ${pages}` : today;
   }
 
   get isBoardScene() {
@@ -612,13 +636,19 @@ export default class GsquareSalesArena extends LightningElement {
   }
 
   get teamTableRows() {
+    const { rows, index } = this.teamPage;
+    return pageRows(rows, index);
+  }
+
+  get leaderRows() {
+    return [
+      ...teamRows(this.people, "manager"),
+      ...teamRows(this.people, "head")
+    ];
+  }
+
+  get tlRows() {
     const d = this.data || {};
-    if (this.scene.kind === "leaders") {
-      return [
-        ...teamRows(this.people, "manager"),
-        ...teamRows(this.people, "head")
-      ];
-    }
     const ist = this.ist;
     const tlHourly = (d.baseline && d.baseline.tlHourly) || {};
     const tlPace = {};

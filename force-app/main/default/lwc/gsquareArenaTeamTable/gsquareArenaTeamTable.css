@@ -24,10 +24,20 @@ td {
   font-family: var(--arena-num-font);
   font-variant-numeric: tabular-nums;
 }
+/* one line per TL (keeps every row the same height so a page always fits);
+   width:100% + max-width:0 lets the label take the spare width and truncate */
 td.lbl {
   text-align: left;
   border-radius: 1.2cqh 0 0 1.2cqh;
   font-size: 3.2cqh;
+  width: 100%;
+  max-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+td.num {
+  white-space: nowrap;
 }
 td:last-child {
   border-radius: 0 1.2cqh 1.2cqh 0;

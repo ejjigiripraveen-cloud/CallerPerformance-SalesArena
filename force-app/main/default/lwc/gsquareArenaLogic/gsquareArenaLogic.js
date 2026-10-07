@@ -111,8 +111,34 @@ export const BOARD_METRICS = [
 const NO_BOTTOM_BOARD = new Set(["booking"]); // most callers have 0 bookings on any day
 export const BOTTOM_BOARDS_FROM_HOUR = 12;
 
-/** One ~3-minute cycle of scenes for the scene area. */
-export function buildPlaylist(ist, cycleIndex) {
+/* Team tables page instead of scrolling: nobody scrolls a wall TV. Sizes are
+   in container-height units, so the same number of rows fits on every screen. */
+export const TEAM_ROWS_PER_PAGE = 6;
+export const TEAM_PAGE_SECONDS = 8;
+
+export function pageCount(rowCount, perPage = TEAM_ROWS_PER_PAGE) {
+  return Math.max(1, Math.ceil(rowCount / perPage));
+}
+
+/** The page on screen `elapsed` seconds into a scene lasting `seconds`. */
+export function pageIndexAt(elapsed, seconds, pages) {
+  if (pages <= 1) return 0;
+  return Math.min(pages - 1, Math.floor(elapsed / (seconds / pages)));
+}
+
+export function pageRows(rows, pageIndex, perPage = TEAM_ROWS_PER_PAGE) {
+  return rows.slice(pageIndex * perPage, (pageIndex + 1) * perPage);
+}
+
+/**
+ * One ~3-minute cycle of scenes for the scene area. Team scenes stretch so
+ * each page of a long team table gets at least TEAM_PAGE_SECONDS.
+ */
+export function buildPlaylist(
+  ist,
+  cycleIndex,
+  { teamPages = 1, leaderPages = 1 } = {}
+) {
   const afternoon = ist.hour >= BOTTOM_BOARDS_FROM_HOUR;
   const topSeconds = afternoon ? 20 : 30;
   const list = [];
@@ -132,10 +158,18 @@ export function buildPlaylist(ist, cycleIndex) {
       });
     }
   });
-  list.push({ id: "team-tl", kind: "team", seconds: 25 });
+  list.push({
+    id: "team-tl",
+    kind: "team",
+    seconds: Math.max(25, teamPages * TEAM_PAGE_SECONDS)
+  });
   if (afternoon) list.push({ id: "watchlist", kind: "watchlist", seconds: 15 });
   if (cycleIndex % 2 === 1)
-    list.push({ id: "team-leaders", kind: "leaders", seconds: 20 });
+    list.push({
+      id: "team-leaders",
+      kind: "leaders",
+      seconds: Math.max(20, leaderPages * TEAM_PAGE_SECONDS)
+    });
   return list;
 }
 
