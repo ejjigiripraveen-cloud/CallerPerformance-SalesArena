@@ -9,10 +9,10 @@ Implementation plan: `docs/superpowers/plans/2026-10-06-zone-tv-wall.md`
 
 | Path | Purpose |
 | --- | --- |
-| `lwc/gsquareSalesArena` | The TV page: data, timers, booking subscription |
+| `lwc/gsquareSalesArenaWallTV_V2` | The TV page: data, timers, booking subscription |
 | `lwc/gsquareArenaLogic` | Every rule (pace, playlist, boards, Watchlist, TV ops), Jest-tested |
 | `lwc/gsquareArenaHero`, `Board`, `TeamTable`, `Watchlist`, `Takeover`, `ZoneRace` | Presentational pieces |
-| `classes/GSquareSalesArenaService` | Zone payload: today + MTD, zone race, baseline, photos |
+| `classes/GSquareSalesArenaServiceWallTV_V2` | Zone payload: today + MTD, zone race, baseline, photos |
 | `classes/GSquareArenaBaselineJob` | Nightly "typical day" curves into `GSquare_Arena_Baseline__c` |
 | `classes/GSquareArenaBookingEvents` + `triggers/GSquareArenaBookingTrigger` | Publishes `GSquare_Arena_Booking__e` |
 | `permissionsets/GSquare_Arena_TV` | For the shared TV user |

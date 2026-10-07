@@ -137,7 +137,7 @@ private class GSquareArenaBookingEventsTest {
         opp(
           '004',
           95000,
-          GSquareSalesArenaWrapper.BOOKING_EXCLUDED_STAGE,
+          GSquareSalesArenaWrapperWallTV_V2.BOOKING_EXCLUDED_STAGE,
           today(),
           uid('arbc1'),
           null

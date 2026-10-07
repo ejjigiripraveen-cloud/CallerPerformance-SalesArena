@@ -97,7 +97,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
   public static List<List<String>> steps() {
     List<List<String>> out = new List<List<String>>();
     for (
-      GSquareSalesArenaWrapper.MetricDef def : GSquareSalesArenaWrapper.getMetrics()
+      GSquareSalesArenaWrapperWallTV_V2.MetricDef def : GSquareSalesArenaWrapperWallTV_V2.getMetrics()
     ) {
       if (!BASELINE_METRICS.contains(def.key))
         continue;
@@ -138,9 +138,9 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
   }
 
   public static void computeStep(Date target, String metricKey, String kind) {
-    GSquareSalesArenaWrapper.MetricDef def;
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def;
     for (
-      GSquareSalesArenaWrapper.MetricDef d : GSquareSalesArenaWrapper.getMetrics()
+      GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics()
     ) {
       if (d.key == metricKey)
         def = d;
@@ -223,15 +223,15 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
 
   private static Map<Id, List<String>> loadScopes() {
     Map<Id, List<String>> out = new Map<Id, List<String>>();
-    List<String> profiles = GSquareSalesArenaWrapper.USER_PROFILES_IN_SCOPE;
+    List<String> profiles = GSquareSalesArenaWrapperWallTV_V2.USER_PROFILES_IN_SCOPE;
     String soql =
       'SELECT Id, ManagerId, ' +
-      GSquareSalesArenaWrapper.USER_FLD_ZONE +
+      GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE +
       ' FROM User WHERE IsActive = true AND Profile.Name IN :profiles AND ' +
-      GSquareSalesArenaWrapper.USER_FLD_ZONE +
+      GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE +
       ' != null';
     for (User u : Database.query(soql)) {
-      String zone = (String) u.get(GSquareSalesArenaWrapper.USER_FLD_ZONE);
+      String zone = (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE);
       List<String> scopes = new List<String>{ zoneScope(zone) };
       if (u.ManagerId != null)
         scopes.add(tlScope(zone, u.ManagerId));
@@ -243,7 +243,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
   /* ------------------------------------------------------------ queries */
 
   private static Boolean isDateTimeField(
-    GSquareSalesArenaWrapper.MetricDef def
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def
   ) {
     Schema.SObjectField f = Schema.getGlobalDescribe()
       .get(def.objectApi)
@@ -254,7 +254,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
       f.getDescribe().getType() == Schema.DisplayType.DATETIME;
   }
 
-  private static List<String> filters(GSquareSalesArenaWrapper.MetricDef def) {
+  private static List<String> filters(GSquareSalesArenaWrapperWallTV_V2.MetricDef def) {
     List<String> wheres = new List<String>();
     if (
       String.isNotBlank(def.statusField) &&
@@ -264,7 +264,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
       wheres.add(
         def.statusField +
           ' IN (' +
-          GSquareSalesArenaService.quoteList(def.statusValues) +
+          GSquareSalesArenaServiceWallTV_V2.quoteList(def.statusValues) +
           ')'
       );
     }
@@ -272,7 +272,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
       .get(def.objectApi)
       .getDescribe();
     wheres.addAll(
-      GSquareSalesArenaService.buildSafeExtraFilters(
+      GSquareSalesArenaServiceWallTV_V2.buildSafeExtraFilters(
         def,
         objDesc,
         new List<String>()
@@ -281,14 +281,14 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
     return wheres;
   }
 
-  private static String ownerSelect(GSquareSalesArenaWrapper.MetricDef def) {
+  private static String ownerSelect(GSquareSalesArenaWrapperWallTV_V2.MetricDef def) {
     return def.ownerField +
       (String.isNotBlank(def.ownerFieldAlt) ? ', ' + def.ownerFieldAlt : '');
   }
 
   private static Id ownerOf(
     SObject so,
-    GSquareSalesArenaWrapper.MetricDef def
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def
   ) {
     Id owner = (Id) so.get(def.ownerField);
     if (owner == null && String.isNotBlank(def.ownerFieldAlt))
@@ -298,7 +298,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
 
   /** Rows for one window. Bind variables are referenced by name in the SOQL. */
   private static List<SObject> fetch(
-    GSquareSalesArenaWrapper.MetricDef def,
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def,
     Boolean isDateTime,
     Date fromDate,
     Date toDate
@@ -327,7 +327,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
   }
 
   private static Map<String, List<Decimal>> dayCurve(
-    GSquareSalesArenaWrapper.MetricDef def,
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def,
     Date d,
     Boolean isDateTime,
     Map<Id, List<String>> scopesByUser
@@ -374,7 +374,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
   }
 
   private static Map<String, Decimal> lastMonthToDate(
-    GSquareSalesArenaWrapper.MetricDef def,
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def,
     Date target,
     Boolean isDateTime,
     Map<Id, List<String>> scopesByUser

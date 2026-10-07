@@ -2,9 +2,9 @@
 <LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>66.0</apiVersion>
     <isExposed>true</isExposed>
-    <masterLabel>G Square Sales Arena</masterLabel>
+    <masterLabel>G Square Sales Arena WallTV V2</masterLabel>
     <description
-  >Zone TV wall. Set Zone to the User.Zone__c value this screen shows. Field mapping lives in GSquareSalesArenaWrapper.cls.</description>
+  >Zone TV wall. Set Zone to the User.Zone__c value this screen shows. Field mapping lives in GSquareSalesArenaWrapperWallTV_V2.cls.</description>
     <targets>
         <target>lightning__AppPage</target>
         <target>lightning__HomePage</target>

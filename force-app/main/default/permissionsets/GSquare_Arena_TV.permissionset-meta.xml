@@ -4,7 +4,7 @@
     <label>G Square Arena TV</label>
     <hasActivationRequired>false</hasActivationRequired>
     <classAccesses>
-        <apexClass>GSquareSalesArenaController</apexClass>
+        <apexClass>GSquareSalesArenaControllerWallTV_V2</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <objectPermissions>

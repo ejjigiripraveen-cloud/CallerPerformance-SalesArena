@@ -11,9 +11,9 @@ public without sharing class GSquareArenaBookingEvents {
   @TestVisible
   private static List<GSquare_Arena_Booking__e> published = new List<GSquare_Arena_Booking__e>();
 
-  private static GSquareSalesArenaWrapper.MetricDef bookingDef() {
+  private static GSquareSalesArenaWrapperWallTV_V2.MetricDef bookingDef() {
     for (
-      GSquareSalesArenaWrapper.MetricDef d : GSquareSalesArenaWrapper.getMetrics()
+      GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics()
     ) {
       if (d.key == 'booking')
         return d;
@@ -31,14 +31,14 @@ public without sharing class GSquareArenaBookingEvents {
 
   public static Boolean qualifies(
     Opportunity o,
-    GSquareSalesArenaWrapper.MetricDef def
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def
   ) {
     if (o == null)
       return false;
     Decimal receipts = (Decimal) o.get(FLD_RECEIPTS);
     return receipts != null &&
-      receipts >= GSquareSalesArenaWrapper.BOOKING_MIN_RECEIPTS &&
-      o.StageName != GSquareSalesArenaWrapper.BOOKING_EXCLUDED_STAGE &&
+      receipts >= GSquareSalesArenaWrapperWallTV_V2.BOOKING_MIN_RECEIPTS &&
+      o.StageName != GSquareSalesArenaWrapperWallTV_V2.BOOKING_EXCLUDED_STAGE &&
       istDate(o.get(def.dateField)) == GSquareArenaBaselineJob.istToday();
   }
 
@@ -46,7 +46,7 @@ public without sharing class GSquareArenaBookingEvents {
     List<Opportunity> newList,
     Map<Id, Opportunity> oldMap
   ) {
-    GSquareSalesArenaWrapper.MetricDef def = bookingDef();
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def = bookingDef();
     if (def == null)
       return;
 
@@ -68,9 +68,9 @@ public without sharing class GSquareArenaBookingEvents {
     Map<Id, User> users = new Map<Id, User>(
       (List<User>) Database.query(
         'SELECT Id, Name, Manager.Name, ' +
-          GSquareSalesArenaWrapper.USER_FLD_ZONE +
+          GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE +
           ', ' +
-          GSquareSalesArenaWrapper.USER_FLD_PHOTO +
+          GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PHOTO +
           ' FROM User WHERE Id IN :callerIds'
       )
     );
@@ -87,10 +87,10 @@ public without sharing class GSquareArenaBookingEvents {
           Opportunity_Id__c = String.valueOf(oppId),
           Caller_Id__c = String.valueOf(u.Id),
           Caller_Name__c = u.Name,
-          Caller_Initials__c = GSquareSalesArenaService.initialsOf(u.Name),
+          Caller_Initials__c = GSquareSalesArenaServiceWallTV_V2.initialsOf(u.Name),
           Photo_Url__c = photos.get(u.Id),
           Tl_Name__c = u.Manager == null ? null : u.Manager.Name,
-          Zone__c = (String) u.get(GSquareSalesArenaWrapper.USER_FLD_ZONE),
+          Zone__c = (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE),
           Project__c = projects.get(oppId)
         )
       );
@@ -124,8 +124,8 @@ public without sharing class GSquareArenaBookingEvents {
   private static Map<Id, String> photoUrls(List<User> users) {
     Map<Id, String> docByUser = new Map<Id, String>();
     for (User u : users) {
-      String doc = GSquareSalesArenaService.extractDocumentId(
-        (String) u.get(GSquareSalesArenaWrapper.USER_FLD_PHOTO)
+      String doc = GSquareSalesArenaServiceWallTV_V2.extractDocumentId(
+        (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PHOTO)
       );
       if (doc != null)
         docByUser.put(u.Id, doc.left(15));
@@ -148,7 +148,7 @@ public without sharing class GSquareArenaBookingEvents {
     for (Id uid : docByUser.keySet())
       out.put(
         uid,
-        GSquareSalesArenaService.renditionUrl(
+        GSquareSalesArenaServiceWallTV_V2.renditionUrl(
           versionByDoc.get(docByUser.get(uid))
         )
       );

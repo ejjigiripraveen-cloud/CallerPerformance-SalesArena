@@ -1,6 +1,6 @@
 import { LightningElement, api, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
-import getDashboard from "@salesforce/apex/GSquareSalesArenaController.getDashboard";
+import getDashboard from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard";
 import { subscribe, onError as onEmpError } from "lightning/empApi";
 import {
   istParts,

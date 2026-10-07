@@ -1,10 +1,10 @@
 import { createElement } from "lwc";
-import GsquareSalesArena from "c/gsquareSalesArena";
-import getDashboard from "@salesforce/apex/GSquareSalesArenaController.getDashboard";
+import GsquareSalesArena from "c/gsquareSalesArenaWallTV_V2";
+import getDashboard from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard";
 import { subscribe } from "lightning/empApi";
 
 jest.mock(
-  "@salesforce/apex/GSquareSalesArenaController.getDashboard",
+  "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard",
   () => {
     const { createApexTestWireAdapter } = require("@salesforce/sfdx-lwc-jest");
     return { default: createApexTestWireAdapter(jest.fn()) };
@@ -95,7 +95,7 @@ let bookingHandler;
 const flush = () => Promise.resolve();
 
 function mount(zone = "Zone 1") {
-  const el = createElement("c-gsquare-sales-arena", { is: GsquareSalesArena });
+  const el = createElement("c-gsquare-sales-arena-wall-t-v_-v2", { is: GsquareSalesArena });
   el.zone = zone;
   document.body.appendChild(el);
   return el;
@@ -125,7 +125,7 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
-describe("c-gsquare-sales-arena", () => {
+describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
   it("asks for a zone when none is configured", async () => {
     const el = mount("");
     await flush();

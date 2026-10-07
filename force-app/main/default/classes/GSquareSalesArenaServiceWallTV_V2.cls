@@ -1,8 +1,8 @@
 /**
  * =============================================================================
- *  GSquareSalesArenaService
+ *  GSquareSalesArenaServiceWallTV_V2
  * =============================================================================
- *  Builds every SOQL statement dynamically from GSquareSalesArenaWrapper.MetricDef.
+ *  Builds every SOQL statement dynamically from GSquareSalesArenaWrapperWallTV_V2.MetricDef.
  *  No field API name is written literally in this class -- remapping a metric in
  *  the config changes the query here with no edit.
  *
@@ -15,9 +15,9 @@
  *  duplicate/renamed-user bugs.
  * =============================================================================
  */
-public without sharing class GSquareSalesArenaService {
+public without sharing class GSquareSalesArenaServiceWallTV_V2 {
 
-    private Map<Id, GSquareSalesArenaWrapper.PersonDTO> peopleById = new Map<Id, GSquareSalesArenaWrapper.PersonDTO>();
+    private Map<Id, GSquareSalesArenaWrapperWallTV_V2.PersonDTO> peopleById = new Map<Id, GSquareSalesArenaWrapperWallTV_V2.PersonDTO>();
     private Map<Id, Id>     managerIdByUser  = new Map<Id, Id>();
     private Map<Id, String> nameById         = new Map<Id, String>();
     private List<String>    warnings         = new List<String>();
@@ -32,22 +32,22 @@ public without sharing class GSquareSalesArenaService {
      * month, hero metrics only. TODAY / THIS_MONTH literals use the running
      * user's timezone, so the shared TV user must be on Asia/Kolkata.
      * ------------------------------------------------------------------ */
-    public GSquareSalesArenaWrapper.DashboardDTO build(String zoneParam) {
+    public GSquareSalesArenaWrapperWallTV_V2.DashboardDTO build(String zoneParam) {
         zone = String.isBlank(zoneParam) ? null : zoneParam.trim();
         if (zone == null) return assemble();
 
         loadUsers();
-        Set<String> hero = new Set<String>(GSquareSalesArenaWrapper.HERO_METRIC_KEYS);
-        for (GSquareSalesArenaWrapper.MetricDef def : GSquareSalesArenaWrapper.getMetrics()) {
+        Set<String> hero = new Set<String>(GSquareSalesArenaWrapperWallTV_V2.HERO_METRIC_KEYS);
+        for (GSquareSalesArenaWrapperWallTV_V2.MetricDef def : GSquareSalesArenaWrapperWallTV_V2.getMetrics()) {
             if (def.isRate == true) continue;             // derived, not queried
             Boolean withMtd = hero.contains(def.key);
             if (def.key == 'booking') {
-                loadBookings(def, GSquareSalesArenaWrapper.DATE_RANGE_TODAY, false);
-                if (withMtd) loadBookings(def, GSquareSalesArenaWrapper.DATE_RANGE_THIS_MONTH, true);
+                loadBookings(def, GSquareSalesArenaWrapperWallTV_V2.DATE_RANGE_TODAY, false);
+                if (withMtd) loadBookings(def, GSquareSalesArenaWrapperWallTV_V2.DATE_RANGE_THIS_MONTH, true);
                 continue;
             }
-            loadAggregate(def, GSquareSalesArenaWrapper.DATE_RANGE_TODAY, false);
-            if (withMtd) loadAggregate(def, GSquareSalesArenaWrapper.DATE_RANGE_THIS_MONTH, true);
+            loadAggregate(def, GSquareSalesArenaWrapperWallTV_V2.DATE_RANGE_TODAY, false);
+            if (withMtd) loadAggregate(def, GSquareSalesArenaWrapperWallTV_V2.DATE_RANGE_THIS_MONTH, true);
         }
         resolveHierarchy();
         loadPhotos();
@@ -60,32 +60,32 @@ public without sharing class GSquareSalesArenaService {
      * ------------------------------------------------------------------ */
     private void loadUsers() {
         String soql =
-            'SELECT Id, ' + GSquareSalesArenaWrapper.USER_FLD_NAME +
-            ', ' + GSquareSalesArenaWrapper.USER_FLD_MANAGER_ID +
-            ', ' + GSquareSalesArenaWrapper.USER_FLD_PROFILE +
-            ', ' + GSquareSalesArenaWrapper.USER_FLD_ZONE +
-            ', ' + GSquareSalesArenaWrapper.USER_FLD_AVAILABILITY +
-            ', ' + GSquareSalesArenaWrapper.USER_FLD_CREATED_DATE +
-            ', ' + GSquareSalesArenaWrapper.USER_FLD_PHOTO +
-            ' FROM ' + GSquareSalesArenaWrapper.OBJ_USER +
-            ' WHERE ' + GSquareSalesArenaWrapper.USER_FLD_ACTIVE + ' = true' +
-            ' AND '   + GSquareSalesArenaWrapper.USER_FLD_PROFILE + ' IN :profiles' +
-            ' AND '   + GSquareSalesArenaWrapper.USER_FLD_ZONE + ' = :zoneFilter' +
+            'SELECT Id, ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_NAME +
+            ', ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_MANAGER_ID +
+            ', ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PROFILE +
+            ', ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE +
+            ', ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_AVAILABILITY +
+            ', ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_CREATED_DATE +
+            ', ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PHOTO +
+            ' FROM ' + GSquareSalesArenaWrapperWallTV_V2.OBJ_USER +
+            ' WHERE ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ACTIVE + ' = true' +
+            ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PROFILE + ' IN :profiles' +
+            ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE + ' = :zoneFilter' +
             ' WITH SECURITY_ENFORCED';
         String zoneFilter = zone;
 
         // getUserProfilesInScope() (not the raw constant) so tests can override
         // with a Profile that genuinely exists in the running org.
-        List<String> profiles = GSquareSalesArenaWrapper.getUserProfilesInScope();
+        List<String> profiles = GSquareSalesArenaWrapperWallTV_V2.getUserProfilesInScope();
 
         // Computed ONCE, server-side, using Apex's authoritative clock --
         // not recomputed per-row, and never relies on the browser's local
         // date/time the way a client-side check would.
-        Date tenureCutoff = Date.today().addDays(-GSquareSalesArenaWrapper.NEW_USER_EXCLUSION_DAYS);
+        Date tenureCutoff = Date.today().addDays(-GSquareSalesArenaWrapperWallTV_V2.NEW_USER_EXCLUSION_DAYS);
 
         for (SObject so : Database.query(soql)) {
             Id     uid  = (Id) so.get('Id');
-            String nm   = (String) so.get(GSquareSalesArenaWrapper.USER_FLD_NAME);
+            String nm   = (String) so.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_NAME);
             // Dotted relationship fields are not readable via SObject.get('Profile.Name')
             // -- that only works for fields directly on the queried object. The parent
             // record must be fetched as its own SObject first.
@@ -93,22 +93,22 @@ public without sharing class GSquareSalesArenaService {
             String prof = profileRec != null ? (String) profileRec.get('Name') : null;
             // Excluded if EITHER mechanism matches (see EXCLUDED_USER_PROFILES doc
             // in Config for why name-only matching was insufficient).
-            if (GSquareSalesArenaWrapper.EXCLUDED_USER_NAMES.contains(nm)) continue;
-            if (prof != null && GSquareSalesArenaWrapper.EXCLUDED_USER_PROFILES.contains(prof)) continue;
+            if (GSquareSalesArenaWrapperWallTV_V2.EXCLUDED_USER_NAMES.contains(nm)) continue;
+            if (prof != null && GSquareSalesArenaWrapperWallTV_V2.EXCLUDED_USER_PROFILES.contains(prof)) continue;
 
-            peopleById.put(uid, new GSquareSalesArenaWrapper.PersonDTO(uid, nm));
+            peopleById.put(uid, new GSquareSalesArenaWrapperWallTV_V2.PersonDTO(uid, nm));
             peopleById.get(uid).profileName = prof;
-            peopleById.get(uid).zone = (String) so.get(GSquareSalesArenaWrapper.USER_FLD_ZONE);
-            peopleById.get(uid).availability = (Boolean) so.get(GSquareSalesArenaWrapper.USER_FLD_AVAILABILITY);
+            peopleById.get(uid).zone = (String) so.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE);
+            peopleById.get(uid).availability = (Boolean) so.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_AVAILABILITY);
             peopleById.get(uid).initials = initialsOf(nm);
-            photoRawByUser.put(uid, (String) so.get(GSquareSalesArenaWrapper.USER_FLD_PHOTO));
+            photoRawByUser.put(uid, (String) so.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PHOTO));
 
-            Datetime createdDt = (Datetime) so.get(GSquareSalesArenaWrapper.USER_FLD_CREATED_DATE);
+            Datetime createdDt = (Datetime) so.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_CREATED_DATE);
             peopleById.get(uid).tenureEligible =
                 createdDt != null && createdDt.date() <= tenureCutoff;
 
             nameById.put(uid, nm);
-            managerIdByUser.put(uid, (Id) so.get(GSquareSalesArenaWrapper.USER_FLD_MANAGER_ID));
+            managerIdByUser.put(uid, (Id) so.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_MANAGER_ID));
         }
 
         if (peopleById.isEmpty()) {
@@ -128,7 +128,7 @@ public without sharing class GSquareSalesArenaService {
      *    Fixed by checking field-level read access manually before the query
      *    instead of relying on the SOQL clause.
      * ------------------------------------------------------------------ */
-    private void loadAggregate(GSquareSalesArenaWrapper.MetricDef def, String dateLiteral, Boolean targetIsRange) {
+    private void loadAggregate(GSquareSalesArenaWrapperWallTV_V2.MetricDef def, String dateLiteral, Boolean targetIsRange) {
         Schema.DescribeSObjectResult objDesc = Schema.getGlobalDescribe().get(def.objectApi).getDescribe();
         if (!objDesc.isAccessible()) {
             warnings.add('Metric "' + def.key + '" skipped: running user lacks OBJECT-level read '
@@ -189,7 +189,7 @@ public without sharing class GSquareSalesArenaService {
 
     /** Manual FLS check, since SECURITY_ENFORCED cannot be used with GROUP BY. */
     /** WHERE clauses shared by the per-person aggregates and the zone race. */
-    private List<String> metricWheres(GSquareSalesArenaWrapper.MetricDef def,
+    private List<String> metricWheres(GSquareSalesArenaWrapperWallTV_V2.MetricDef def,
                                       Schema.DescribeSObjectResult objDesc, String dateLiteral) {
         List<String> wheres = new List<String>();
         if (String.isNotBlank(def.dateField)) wheres.add(def.dateField + ' = ' + dateLiteral);
@@ -197,7 +197,7 @@ public without sharing class GSquareSalesArenaService {
             wheres.add(def.statusField + ' IN (' + quoteList(def.statusValues) + ')');
         }
         // Call Count / Talk Time: exclude G-Talk inbound calls (confirmed
-        // business rule -- see GSquareSalesArenaWrapper.GTALK_INBOUND_EXCLUDED_METRIC_KEYS).
+        // business rule -- see GSquareSalesArenaWrapperWallTV_V2.GTALK_INBOUND_EXCLUDED_METRIC_KEYS).
         // Applied unconditionally for these two metric keys, independent of
         // FTD/MTD mode -- this is a data-quality exclusion, not a date filter.
         //
@@ -209,14 +209,14 @@ public without sharing class GSquareSalesArenaService {
         // production: this exact clause broke callsMade and talktime).
         // Wrapping as "(NOT (A AND B))" instead of "NOT (A AND B)" fixes it
         // without changing the boolean logic at all.
-        if (GSquareSalesArenaWrapper.GTALK_INBOUND_EXCLUDED_METRIC_KEYS.contains(def.key)) {
+        if (GSquareSalesArenaWrapperWallTV_V2.GTALK_INBOUND_EXCLUDED_METRIC_KEYS.contains(def.key)) {
             wheres.add(
                 '(NOT (' +
-                GSquareSalesArenaWrapper.CALL_DETAIL_FLD_SOURCE_OF_CALL + ' = \'' +
-                    String.escapeSingleQuotes(GSquareSalesArenaWrapper.GTALK_SOURCE_OF_CALL_VALUE) + '\'' +
+                GSquareSalesArenaWrapperWallTV_V2.CALL_DETAIL_FLD_SOURCE_OF_CALL + ' = \'' +
+                    String.escapeSingleQuotes(GSquareSalesArenaWrapperWallTV_V2.GTALK_SOURCE_OF_CALL_VALUE) + '\'' +
                 ' AND ' +
-                GSquareSalesArenaWrapper.CALL_DETAIL_FLD_CALL_TYPE + ' = \'' +
-                    String.escapeSingleQuotes(GSquareSalesArenaWrapper.GTALK_INBOUND_CALL_TYPE_VALUE) + '\'' +
+                GSquareSalesArenaWrapperWallTV_V2.CALL_DETAIL_FLD_CALL_TYPE + ' = \'' +
+                    String.escapeSingleQuotes(GSquareSalesArenaWrapperWallTV_V2.GTALK_INBOUND_CALL_TYPE_VALUE) + '\'' +
                 '))'
             );
         }
@@ -225,16 +225,16 @@ public without sharing class GSquareSalesArenaService {
         return wheres;
     }
 
-    private Boolean fieldsAreReadable(GSquareSalesArenaWrapper.MetricDef def, Schema.DescribeSObjectResult objDesc) {
+    private Boolean fieldsAreReadable(GSquareSalesArenaWrapperWallTV_V2.MetricDef def, Schema.DescribeSObjectResult objDesc) {
         Map<String, Schema.SObjectField> fields = objDesc.fields.getMap();
 
         List<String> toCheck = new List<String>{ def.ownerField };
         if (String.isNotBlank(def.dateField))   toCheck.add(def.dateField);
         if (String.isNotBlank(def.statusField)) toCheck.add(def.statusField);
         if (String.isNotBlank(def.valueField))  toCheck.add(def.valueField);
-        if (GSquareSalesArenaWrapper.GTALK_INBOUND_EXCLUDED_METRIC_KEYS.contains(def.key)) {
-            toCheck.add(GSquareSalesArenaWrapper.CALL_DETAIL_FLD_SOURCE_OF_CALL);
-            toCheck.add(GSquareSalesArenaWrapper.CALL_DETAIL_FLD_CALL_TYPE);
+        if (GSquareSalesArenaWrapperWallTV_V2.GTALK_INBOUND_EXCLUDED_METRIC_KEYS.contains(def.key)) {
+            toCheck.add(GSquareSalesArenaWrapperWallTV_V2.CALL_DETAIL_FLD_SOURCE_OF_CALL);
+            toCheck.add(GSquareSalesArenaWrapperWallTV_V2.CALL_DETAIL_FLD_CALL_TYPE);
         }
 
         for (String f : toCheck) {
@@ -270,7 +270,7 @@ public without sharing class GSquareSalesArenaService {
     };
 
     /** @see buildSafeExtraFilters(MetricDef, Schema.DescribeSObjectResult, List&lt;String&gt;) */
-    public static List<String> buildSafeExtraFilters(GSquareSalesArenaWrapper.MetricDef def, Schema.DescribeSObjectResult objDesc, List<String> warningsOut) {
+    public static List<String> buildSafeExtraFilters(GSquareSalesArenaWrapperWallTV_V2.MetricDef def, Schema.DescribeSObjectResult objDesc, List<String> warningsOut) {
         List<String> out = new List<String>();
         if (def.extraFilterConditions == null) return out;
 
@@ -329,7 +329,7 @@ public without sharing class GSquareSalesArenaService {
      * 3. BOOKINGS -- needs owner fallback, so cannot use a GROUP BY
      *    Safe: booking volume is single digits per day.
      * ------------------------------------------------------------------ */
-    private void loadBookings(GSquareSalesArenaWrapper.MetricDef def, String dateLiteral, Boolean targetIsRange) {
+    private void loadBookings(GSquareSalesArenaWrapperWallTV_V2.MetricDef def, String dateLiteral, Boolean targetIsRange) {
         Schema.DescribeSObjectResult objDesc = Schema.getGlobalDescribe().get(def.objectApi).getDescribe();
         if (!objDesc.isAccessible()) {
             warnings.add('Metric "' + def.key + '" skipped: running user lacks OBJECT-level read '
@@ -409,7 +409,7 @@ public without sharing class GSquareSalesArenaService {
         }
 
         Integer noTl = 0, noMgr = 0;
-        for (GSquareSalesArenaWrapper.PersonDTO p : peopleById.values()) {
+        for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : peopleById.values()) {
             Id tl  = managerIdByUser.get(p.userId);
             Id mgr = (tl  != null) ? managerIdByUser.get(tl)  : null;
             Id hd  = (mgr != null) ? managerIdByUser.get(mgr) : null;
@@ -418,9 +418,9 @@ public without sharing class GSquareSalesArenaService {
             if (mgr != null) { p.managerId = mgr; p.managerName = nameById.get(mgr); } else noMgr++;
             if (hd != null)  { p.headId = hd; p.headName = nameById.get(hd); }
 
-            if (p.tlName == null)      p.tlName      = GSquareSalesArenaWrapper.UNASSIGNED;
-            if (p.managerName == null) p.managerName = GSquareSalesArenaWrapper.UNASSIGNED;
-            if (p.headName == null)    p.headName    = GSquareSalesArenaWrapper.UNASSIGNED;
+            if (p.tlName == null)      p.tlName      = GSquareSalesArenaWrapperWallTV_V2.UNASSIGNED;
+            if (p.managerName == null) p.managerName = GSquareSalesArenaWrapperWallTV_V2.UNASSIGNED;
+            if (p.headName == null)    p.headName    = GSquareSalesArenaWrapperWallTV_V2.UNASSIGNED;
         }
 
         // With Presales outbound/TL/Head all in USER_PROFILES_IN_SCOPE, ~98% of
@@ -489,12 +489,12 @@ public without sharing class GSquareSalesArenaService {
      * so a TL shown on two zone TVs reads "6 of 11 callers".
      * ------------------------------------------------------------------ */
     private void loadAllZoneUsers() {
-        List<String> profiles = GSquareSalesArenaWrapper.getUserProfilesInScope();
-        String soql = 'SELECT Id, Name, ManagerId, ' + GSquareSalesArenaWrapper.USER_FLD_ZONE +
+        List<String> profiles = GSquareSalesArenaWrapperWallTV_V2.getUserProfilesInScope();
+        String soql = 'SELECT Id, Name, ManagerId, ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE +
             ' FROM User WHERE IsActive = true AND Profile.Name IN :profiles';
         for (User u : Database.query(soql)) {
-            if (GSquareSalesArenaWrapper.EXCLUDED_USER_NAMES.contains(u.Name)) continue;
-            String z = (String) u.get(GSquareSalesArenaWrapper.USER_FLD_ZONE);
+            if (GSquareSalesArenaWrapperWallTV_V2.EXCLUDED_USER_NAMES.contains(u.Name)) continue;
+            String z = (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE);
             if (String.isNotBlank(z)) zoneByUser.put(u.Id, z);
             if (u.ManagerId != null) {
                 String k = String.valueOf(u.ManagerId);
@@ -503,16 +503,16 @@ public without sharing class GSquareSalesArenaService {
         }
     }
 
-    private List<GSquareSalesArenaWrapper.ZoneRaceEntry> zoneRace() {
+    private List<GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry> zoneRace() {
         Map<String, Decimal> byZone = new Map<String, Decimal>();
         for (String z : zoneByUser.values()) byZone.put(z, 0);
-        GSquareSalesArenaWrapper.MetricDef def;
-        for (GSquareSalesArenaWrapper.MetricDef d : GSquareSalesArenaWrapper.getMetrics()) {
+        GSquareSalesArenaWrapperWallTV_V2.MetricDef def;
+        for (GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics()) {
             if (d.key == 'svConducted') def = d;
         }
         if (def != null) {
             Schema.DescribeSObjectResult objDesc = Schema.getGlobalDescribe().get(def.objectApi).getDescribe();
-            List<String> wheres = metricWheres(def, objDesc, GSquareSalesArenaWrapper.DATE_RANGE_TODAY);
+            List<String> wheres = metricWheres(def, objDesc, GSquareSalesArenaWrapperWallTV_V2.DATE_RANGE_TODAY);
             String soql = 'SELECT ' + def.ownerField + ' ownerId, COUNT(Id) aggValue FROM ' + def.objectApi +
                 ' WHERE ' + String.join(wheres, ' AND ') + ' GROUP BY ' + def.ownerField + ' LIMIT 50000';
             try {
@@ -525,14 +525,14 @@ public without sharing class GSquareSalesArenaService {
                 warnings.add('Zone race failed: ' + e.getMessage());
             }
         }
-        List<GSquareSalesArenaWrapper.ZoneRaceEntry> out = new List<GSquareSalesArenaWrapper.ZoneRaceEntry>();
-        for (String z : byZone.keySet()) out.add(new GSquareSalesArenaWrapper.ZoneRaceEntry(z, byZone.get(z)));
+        List<GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry> out = new List<GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry>();
+        for (String z : byZone.keySet()) out.add(new GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry(z, byZone.get(z)));
         out.sort(new ZoneRaceComparator());
         return out;
     }
 
-    private class ZoneRaceComparator implements Comparator<GSquareSalesArenaWrapper.ZoneRaceEntry> {
-        public Integer compare(GSquareSalesArenaWrapper.ZoneRaceEntry a, GSquareSalesArenaWrapper.ZoneRaceEntry b) {
+    private class ZoneRaceComparator implements Comparator<GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry> {
+        public Integer compare(GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry a, GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry b) {
             if (a.svConducted != b.svConducted) return a.svConducted > b.svConducted ? -1 : 1;
             return a.zone.compareTo(b.zone);
         }
@@ -542,14 +542,14 @@ public without sharing class GSquareSalesArenaService {
      * BASELINE -- today's IST weekday curves and last-month-to-date, written
      * nightly by GSquareArenaBaselineJob.
      * ------------------------------------------------------------------ */
-    private GSquareSalesArenaWrapper.BaselineDTO loadBaseline() {
-        GSquareSalesArenaWrapper.BaselineDTO b = new GSquareSalesArenaWrapper.BaselineDTO();
+    private GSquareSalesArenaWrapperWallTV_V2.BaselineDTO loadBaseline() {
+        GSquareSalesArenaWrapperWallTV_V2.BaselineDTO b = new GSquareSalesArenaWrapperWallTV_V2.BaselineDTO();
         Date today = GSquareArenaBaselineJob.istToday();
         Integer wd = GSquareArenaBaselineJob.weekdayOf(today);
         Integer dom = today.day();
         String zoneKey = GSquareArenaBaselineJob.zoneScope(zone);
         Map<String, String> tlByScope = new Map<String, String>();
-        for (GSquareSalesArenaWrapper.PersonDTO p : peopleById.values()) {
+        for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : peopleById.values()) {
             if (p.tlId != null) tlByScope.put(GSquareArenaBaselineJob.tlScope(zone, p.tlId), String.valueOf(p.tlId));
         }
         Set<String> scopes = new Set<String>(tlByScope.keySet());
@@ -585,19 +585,19 @@ public without sharing class GSquareSalesArenaService {
         return z;
     }
 
-    private GSquareSalesArenaWrapper.DashboardDTO assemble() {
-        GSquareSalesArenaWrapper.DashboardDTO dto = new GSquareSalesArenaWrapper.DashboardDTO();
+    private GSquareSalesArenaWrapperWallTV_V2.DashboardDTO assemble() {
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = new GSquareSalesArenaWrapperWallTV_V2.DashboardDTO();
 
-        dto.metricDefs = new List<GSquareSalesArenaWrapper.MetricInfo>();
-        for (GSquareSalesArenaWrapper.MetricDef d : GSquareSalesArenaWrapper.getMetrics()) {
-            dto.metricDefs.add(new GSquareSalesArenaWrapper.MetricInfo(d));
+        dto.metricDefs = new List<GSquareSalesArenaWrapperWallTV_V2.MetricInfo>();
+        for (GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics()) {
+            dto.metricDefs.add(new GSquareSalesArenaWrapperWallTV_V2.MetricInfo(d));
         }
 
         dto.people = peopleById.values();
 
         // Zero-fill so the LWC never handles undefined
-        for (GSquareSalesArenaWrapper.PersonDTO p : dto.people) {
-            for (GSquareSalesArenaWrapper.MetricDef d : GSquareSalesArenaWrapper.getMetrics()) {
+        for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : dto.people) {
+            for (GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics()) {
                 if (d.isRate == true) continue;
                 if (!p.metrics.containsKey(d.key)) p.metrics.put(d.key, 0);
             }
@@ -605,10 +605,10 @@ public without sharing class GSquareSalesArenaService {
 
         // Floor totals
         dto.totals = new Map<String, Decimal>();
-        for (GSquareSalesArenaWrapper.MetricDef d : GSquareSalesArenaWrapper.getMetrics()) {
+        for (GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics()) {
             if (d.isRate == true) continue;
             Decimal sum = 0;
-            for (GSquareSalesArenaWrapper.PersonDTO p : dto.people) sum += p.metrics.get(d.key);
+            for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : dto.people) sum += p.metrics.get(d.key);
             dto.totals.put(d.key, sum);
         }
         // Derived rates from the same config. Each rate is isolated in its own
@@ -616,7 +616,7 @@ public without sharing class GSquareSalesArenaService {
         // -- plausible via a CMDT typo -- must skip only that one rate metric
         // with a warning, never take down the whole dashboard the way an
         // unguarded null-dereference here previously would have.
-        for (GSquareSalesArenaWrapper.MetricDef d : GSquareSalesArenaWrapper.getMetrics()) {
+        for (GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics()) {
             if (d.isRate != true) continue;
             try {
                 if (String.isBlank(d.numeratorKey) || String.isBlank(d.denominatorKey)) {
@@ -652,13 +652,13 @@ public without sharing class GSquareSalesArenaService {
         // filter (matching on name) to combine both real teams' individual
         // rosters into a single Team Spotlight view.
         Map<Id, Integer> teamSizeById = new Map<Id, Integer>();
-        for (GSquareSalesArenaWrapper.PersonDTO p : dto.people) {
-            if (p.tlName == GSquareSalesArenaWrapper.UNASSIGNED || p.tlId == null) continue;
+        for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : dto.people) {
+            if (p.tlName == GSquareSalesArenaWrapperWallTV_V2.UNASSIGNED || p.tlId == null) continue;
             teamSizeById.put(p.tlId, (teamSizeById.containsKey(p.tlId) ? teamSizeById.get(p.tlId) : 0) + 1);
         }
-        List<GSquareSalesArenaWrapper.TeamRosterEntry> roster = new List<GSquareSalesArenaWrapper.TeamRosterEntry>();
+        List<GSquareSalesArenaWrapperWallTV_V2.TeamRosterEntry> roster = new List<GSquareSalesArenaWrapperWallTV_V2.TeamRosterEntry>();
         for (Id tlId : teamSizeById.keySet()) {
-            GSquareSalesArenaWrapper.TeamRosterEntry entry = new GSquareSalesArenaWrapper.TeamRosterEntry();
+            GSquareSalesArenaWrapperWallTV_V2.TeamRosterEntry entry = new GSquareSalesArenaWrapperWallTV_V2.TeamRosterEntry();
             entry.tlId = tlId;
             entry.tlName = nameById.get(tlId);
             entry.teamSize = teamSizeById.get(tlId);
@@ -674,41 +674,41 @@ public without sharing class GSquareSalesArenaService {
         dto.zone           = zone;
         dto.zoneConfigured = zone != null;
         dto.mtdTotals = new Map<String, Decimal>();
-        for (String k : GSquareSalesArenaWrapper.HERO_METRIC_KEYS) {
+        for (String k : GSquareSalesArenaWrapperWallTV_V2.HERO_METRIC_KEYS) {
             Decimal mtdSum = 0;
-            for (GSquareSalesArenaWrapper.PersonDTO p : dto.people) {
+            for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : dto.people) {
                 if (!p.mtdMetrics.containsKey(k)) p.mtdMetrics.put(k, 0);
                 mtdSum += p.mtdMetrics.get(k);
             }
             dto.mtdTotals.put(k, mtdSum);
         }
-        dto.zoneRace    = zone == null ? new List<GSquareSalesArenaWrapper.ZoneRaceEntry>() : zoneRace();
-        dto.baseline    = zone == null ? new GSquareSalesArenaWrapper.BaselineDTO() : loadBaseline();
+        dto.zoneRace    = zone == null ? new List<GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry>() : zoneRace();
+        dto.baseline    = zone == null ? new GSquareSalesArenaWrapperWallTV_V2.BaselineDTO() : loadBaseline();
         dto.tlTeamSizes = tlTeamSizes;
         dto.warnings    = warnings;
 
         dto.settings = new Map<String, Object>{
-            'tierSeconds'            => GSquareSalesArenaWrapper.TIER_SECONDS,
-            'modeFlipSeconds'        => GSquareSalesArenaWrapper.MODE_FLIP_SECONDS,
-            'boardRowLimit'          => GSquareSalesArenaWrapper.BOARD_ROW_LIMIT,
-            'alertHoldSeconds'       => GSquareSalesArenaWrapper.ALERT_HOLD_SECONDS,
-            'overlayHoldSeconds'     => GSquareSalesArenaWrapper.OVERLAY_HOLD_SECONDS,
-            'overlayManagerMinutes'  => GSquareSalesArenaWrapper.OVERLAY_MANAGER_EVERY_MINUTES,
-            'overlayHeadMinutes'     => GSquareSalesArenaWrapper.OVERLAY_HEAD_EVERY_MINUTES,
-            'refreshSeconds'         => GSquareSalesArenaWrapper.REFRESH_INTERVAL_SECONDS,
-            'watchlistMinWeak'       => GSquareSalesArenaWrapper.WATCHLIST_MIN_WEAK_METRICS,
-            'watchlistMaxEntries'    => GSquareSalesArenaWrapper.WATCHLIST_MAX_ENTRIES,
-            'alertCriticalZeroCount' => GSquareSalesArenaWrapper.ALERT_CRITICAL_ZERO_COUNT,
-            'rateGoodThreshold'      => GSquareSalesArenaWrapper.RATE_GOOD_THRESHOLD,
-            'rateBadThreshold'       => GSquareSalesArenaWrapper.RATE_BAD_THRESHOLD,
-            'alertPopupProfile'      => GSquareSalesArenaWrapper.ALERT_POPUP_PROFILE
+            'tierSeconds'            => GSquareSalesArenaWrapperWallTV_V2.TIER_SECONDS,
+            'modeFlipSeconds'        => GSquareSalesArenaWrapperWallTV_V2.MODE_FLIP_SECONDS,
+            'boardRowLimit'          => GSquareSalesArenaWrapperWallTV_V2.BOARD_ROW_LIMIT,
+            'alertHoldSeconds'       => GSquareSalesArenaWrapperWallTV_V2.ALERT_HOLD_SECONDS,
+            'overlayHoldSeconds'     => GSquareSalesArenaWrapperWallTV_V2.OVERLAY_HOLD_SECONDS,
+            'overlayManagerMinutes'  => GSquareSalesArenaWrapperWallTV_V2.OVERLAY_MANAGER_EVERY_MINUTES,
+            'overlayHeadMinutes'     => GSquareSalesArenaWrapperWallTV_V2.OVERLAY_HEAD_EVERY_MINUTES,
+            'refreshSeconds'         => GSquareSalesArenaWrapperWallTV_V2.REFRESH_INTERVAL_SECONDS,
+            'watchlistMinWeak'       => GSquareSalesArenaWrapperWallTV_V2.WATCHLIST_MIN_WEAK_METRICS,
+            'watchlistMaxEntries'    => GSquareSalesArenaWrapperWallTV_V2.WATCHLIST_MAX_ENTRIES,
+            'alertCriticalZeroCount' => GSquareSalesArenaWrapperWallTV_V2.ALERT_CRITICAL_ZERO_COUNT,
+            'rateGoodThreshold'      => GSquareSalesArenaWrapperWallTV_V2.RATE_GOOD_THRESHOLD,
+            'rateBadThreshold'       => GSquareSalesArenaWrapperWallTV_V2.RATE_BAD_THRESHOLD,
+            'alertPopupProfile'      => GSquareSalesArenaWrapperWallTV_V2.ALERT_POPUP_PROFILE
         };
         return dto;
     }
 
     /** Largest team first; ties broken by name for a stable, deterministic order. */
-    private class TeamRosterSizeComparator implements Comparator<GSquareSalesArenaWrapper.TeamRosterEntry> {
-        public Integer compare(GSquareSalesArenaWrapper.TeamRosterEntry a, GSquareSalesArenaWrapper.TeamRosterEntry b) {
+    private class TeamRosterSizeComparator implements Comparator<GSquareSalesArenaWrapperWallTV_V2.TeamRosterEntry> {
+        public Integer compare(GSquareSalesArenaWrapperWallTV_V2.TeamRosterEntry a, GSquareSalesArenaWrapperWallTV_V2.TeamRosterEntry b) {
             if (b.teamSize != a.teamSize) return b.teamSize - a.teamSize;
             return a.tlName.compareTo(b.tlName);
         }

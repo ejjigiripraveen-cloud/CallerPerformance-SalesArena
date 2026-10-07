@@ -1,5 +1,5 @@
 @IsTest
-private class GSquareSalesArenaServiceTest {
+private class GSquareSalesArenaServiceWallTV_V2Test {
 
     @TestSetup
     static void setup() {
@@ -22,10 +22,10 @@ private class GSquareSalesArenaServiceTest {
         return [SELECT Id, Name FROM User WHERE Alias = :alias LIMIT 1];
     }
 
-    private static GSquareSalesArenaWrapper.DashboardDTO buildAs(String zone) {
-        GSquareSalesArenaWrapper.DashboardDTO dto;
+    private static GSquareSalesArenaWrapperWallTV_V2.DashboardDTO buildAs(String zone) {
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto;
         System.runAs(u('arsadm')) {
-            dto = new GSquareSalesArenaService().build(zone);
+            dto = new GSquareSalesArenaServiceWallTV_V2().build(zone);
         }
         return dto;
     }
@@ -33,7 +33,7 @@ private class GSquareSalesArenaServiceTest {
     @IsTest
     static void blankZoneIsNotConfigured() {
         Test.startTest();
-        GSquareSalesArenaWrapper.DashboardDTO dto = new GSquareSalesArenaService().build('  ');
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = new GSquareSalesArenaServiceWallTV_V2().build('  ');
         Test.stopTest();
         System.assertEquals(false, dto.zoneConfigured);
         System.assertEquals(0, dto.people.size());
@@ -47,17 +47,17 @@ private class GSquareSalesArenaServiceTest {
             GSquareArenaTestData.conductedVisit(u('arsc2').Id, today, 10, 0)
         };
         Test.startTest();
-        GSquareSalesArenaWrapper.DashboardDTO dto = buildAs('Arena Z1');
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Arena Z1');
         Test.stopTest();
 
         System.assertEquals(true, dto.zoneConfigured);
         Set<Id> ids = new Set<Id>();
-        for (GSquareSalesArenaWrapper.PersonDTO p : dto.people) ids.add(p.userId);
+        for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : dto.people) ids.add(p.userId);
         System.assert(ids.contains(u('arsc1').Id), 'Z1 caller present');
         System.assert(!ids.contains(u('arsc2').Id), 'Z2 caller filtered out');
 
         Map<String, Decimal> race = new Map<String, Decimal>();
-        for (GSquareSalesArenaWrapper.ZoneRaceEntry e : dto.zoneRace) race.put(e.zone, e.svConducted);
+        for (GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry e : dto.zoneRace) race.put(e.zone, e.svConducted);
         System.assertEquals(1, race.get('Arena Z1'));
         System.assertEquals(1, race.get('Arena Z2'));
 
@@ -73,7 +73,7 @@ private class GSquareSalesArenaServiceTest {
         insert visits;
 
         Test.startTest();
-        GSquareSalesArenaWrapper.DashboardDTO dto = buildAs('Arena Z1');
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Arena Z1');
         Test.stopTest();
 
         System.assertEquals(1, dto.totals.get('svConducted'));
@@ -96,7 +96,7 @@ private class GSquareSalesArenaServiceTest {
                 Scope_Key__c = zoneScope, Metric_Key__c = 'booking', Kind__c = 'MTD', Day_Of_Month__c = today.day(), Value__c = 9)
         };
         Test.startTest();
-        GSquareSalesArenaWrapper.DashboardDTO dto = buildAs('Arena Z1');
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Arena Z1');
         Test.stopTest();
 
         System.assertEquals(7, dto.baseline.hourly.get('svConducted')[10]);
@@ -108,22 +108,22 @@ private class GSquareSalesArenaServiceTest {
     @IsTest
     static void photoUrlParsing() {
         String raw = 'https://gsquaregroup.lightning.force.com/lightning/r/ContentDocument/069AB000001abcDEFG/view';
-        System.assertEquals('069AB000001abcDEFG', GSquareSalesArenaService.extractDocumentId(raw));
-        System.assertEquals(null, GSquareSalesArenaService.extractDocumentId(null));
-        System.assertEquals(null, GSquareSalesArenaService.extractDocumentId('https://example.com/photo.png'));
+        System.assertEquals('069AB000001abcDEFG', GSquareSalesArenaServiceWallTV_V2.extractDocumentId(raw));
+        System.assertEquals(null, GSquareSalesArenaServiceWallTV_V2.extractDocumentId(null));
+        System.assertEquals(null, GSquareSalesArenaServiceWallTV_V2.extractDocumentId('https://example.com/photo.png'));
         Id versionId = '068AB000001abcD'; // 15-char: no checksum to fake
         System.assertEquals(
             '/sfc/servlet.shepherd/version/renditionDownload?rendition=THUMB240BY180&versionId=' + versionId,
-            GSquareSalesArenaService.renditionUrl(versionId)
+            GSquareSalesArenaServiceWallTV_V2.renditionUrl(versionId)
         );
-        System.assertEquals(null, GSquareSalesArenaService.renditionUrl(null));
+        System.assertEquals(null, GSquareSalesArenaServiceWallTV_V2.renditionUrl(null));
     }
 
     @IsTest
     static void initials() {
-        System.assertEquals('PR', GSquareSalesArenaService.initialsOf('Priya Ramesh'));
-        System.assertEquals('PR', GSquareSalesArenaService.initialsOf('priya k ramesh'));
-        System.assertEquals('M', GSquareSalesArenaService.initialsOf('Madonna'));
-        System.assertEquals('', GSquareSalesArenaService.initialsOf(null));
+        System.assertEquals('PR', GSquareSalesArenaServiceWallTV_V2.initialsOf('Priya Ramesh'));
+        System.assertEquals('PR', GSquareSalesArenaServiceWallTV_V2.initialsOf('priya k ramesh'));
+        System.assertEquals('M', GSquareSalesArenaServiceWallTV_V2.initialsOf('Madonna'));
+        System.assertEquals('', GSquareSalesArenaServiceWallTV_V2.initialsOf(null));
     }
 }

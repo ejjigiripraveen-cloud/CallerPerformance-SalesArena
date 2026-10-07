@@ -1,19 +1,19 @@
 /**
  * =============================================================================
- *  GSquareSalesArenaController -- the only @AuraEnabled surface
+ *  GSquareSalesArenaControllerWallTV_V2 -- the only @AuraEnabled surface
  * =============================================================================
  *  One method, one round trip, one payload. Every LWC component consumes slices
  *  of the same DashboardDTO, so the dashboard never issues duplicate queries for
  *  the same field.
  * =============================================================================
  */
-public without sharing class GSquareSalesArenaController {
+public without sharing class GSquareSalesArenaControllerWallTV_V2 {
 
     @AuraEnabled(cacheable=true)
     /** @param zone the TV page's Zone__c value; blank returns zoneConfigured = false. */
-    public static GSquareSalesArenaWrapper.DashboardDTO getDashboard(String zone) {
+    public static GSquareSalesArenaWrapperWallTV_V2.DashboardDTO getDashboard(String zone) {
         try {
-            return new GSquareSalesArenaService().build(zone);
+            return new GSquareSalesArenaServiceWallTV_V2().build(zone);
         } catch (Exception e) {
             // FIX (audit finding #17): the previous message included raw
             // e.getMessage() and e.getLineNumber(), leaking internal
@@ -21,7 +21,7 @@ public without sharing class GSquareSalesArenaController {
             // from dynamic SOQL) to the browser console. Full detail now goes
             // to a server-side debug log only; the client gets a generic,
             // actionable message.
-            System.debug(LoggingLevel.ERROR, 'GSquareSalesArenaController.getDashboard failed: '
+            System.debug(LoggingLevel.ERROR, 'GSquareSalesArenaControllerWallTV_V2.getDashboard failed: '
                 + e.getMessage() + ' | line ' + e.getLineNumber() + ' | ' + e.getStackTraceString());
             throw new AuraHandledException(
                 'Sales Arena is temporarily unavailable. Please try again.'

@@ -1,9 +1,9 @@
 @IsTest
-private class GSquareSalesArenaControllerTest {
+private class GSquareSalesArenaControllerWallTV_V2Test {
 
     @IsTest
     static void blankZoneIsNotConfigured() {
-        GSquareSalesArenaWrapper.DashboardDTO dto = GSquareSalesArenaController.getDashboard(null);
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = GSquareSalesArenaControllerWallTV_V2.getDashboard(null);
         System.assertEquals(false, dto.zoneConfigured);
         System.assertEquals(0, dto.people.size());
         System.assertNotEquals(null, dto.metricDefs);
@@ -11,7 +11,7 @@ private class GSquareSalesArenaControllerTest {
 
     @IsTest
     static void unknownZoneReturnsEmptyBoards() {
-        GSquareSalesArenaWrapper.DashboardDTO dto = GSquareSalesArenaController.getDashboard('No Such Zone 9z');
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = GSquareSalesArenaControllerWallTV_V2.getDashboard('No Such Zone 9z');
         System.assertEquals(true, dto.zoneConfigured);
         System.assertEquals('No Such Zone 9z', dto.zone);
         System.assertEquals(0, dto.people.size());

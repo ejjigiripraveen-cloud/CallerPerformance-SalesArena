@@ -2,7 +2,7 @@
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
     <deploymentStatus>Deployed</deploymentStatus>
     <description
-  >Nightly "typical day" baselines for the Sales Arena zone TV wall. Written by GSquareArenaBaselineJob; read by GSquareSalesArenaService.</description>
+  >Nightly "typical day" baselines for the Sales Arena zone TV wall. Written by GSquareArenaBaselineJob; read by GSquareSalesArenaServiceWallTV_V2.</description>
     <label>Arena Baseline</label>
     <pluralLabel>Arena Baselines</pluralLabel>
     <nameField>

@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- *  GSquareSalesArenaWrapper  --  THE SINGLE SOURCE OF TRUTH
+ *  GSquareSalesArenaWrapperWallTV_V2  --  THE SINGLE SOURCE OF TRUTH
  * =============================================================================
  *
  *  EVERY Salesforce object name, field API name, filter value and business rule
@@ -15,13 +15,13 @@
  *  ---------------------------------------------------------------------------
  *  UPGRADE PATH: move to Custom Metadata (no deploy needed to remap)
  *  ---------------------------------------------------------------------------
- *  Create GSquareSalesArenaMetric__mdt with fields mirroring MetricDef below, then
+ *  Create GSquareArenaTvMetric__mdt with fields mirroring MetricDef below, then
  *  replace buildMetrics() with a query over that CMDT. The rest of the codebase
  *  needs no change because everything consumes getMetrics(). Kept as Apex here
  *  so the config is unit-testable and version-controlled.
  * =============================================================================
  */
-public without sharing class GSquareSalesArenaWrapper {
+public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
 
     /* =========================================================================
      * SECTION 1 -- OBJECT API NAMES
@@ -199,7 +199,7 @@ public without sharing class GSquareSalesArenaWrapper {
 
     /**
      * Returns the metric definitions: hardcoded defaults, with any
-     * GSquareSalesArenaMetric__mdt records applied as an ADDITIVE override BY KEY.
+     * GSquareArenaTvMetric__mdt records applied as an ADDITIVE override BY KEY.
      *
      * FIX (audit finding #4): the previous version treated "any CMDT record
      * exists" as "replace the entire default set", so a single CMDT record
@@ -214,7 +214,7 @@ public without sharing class GSquareSalesArenaWrapper {
      */
     public static List<MetricDef> getMetrics() {
         if (metricCache == null) {
-            List<GSquareSalesArenaMetric__mdt> overrides = [
+            List<GSquareArenaTvMetric__mdt> overrides = [
                 SELECT Metric_Key__c, Metric_Label__c, Unit__c, Display_Order__c,
                        Show_In_Funnel__c, Show_In_Boards__c, Is_Rate__c,
                        Object_API__c, Owner_Field_API__c, Owner_Field_Alt__c,
@@ -222,7 +222,7 @@ public without sharing class GSquareSalesArenaWrapper {
                        Aggregate_Type__c, Value_Field_API__c, Extra_Filter__c,
                        Divisor__c, Numerator_Key__c, Denominator_Key__c,
                        Min_Volume_JSON__c, DeveloperName
-                FROM GSquareSalesArenaMetric__mdt
+                FROM GSquareArenaTvMetric__mdt
                 ORDER BY DeveloperName ASC
             ];
             metricCache = mergeMetrics(buildMetrics(), overrides);
@@ -233,22 +233,22 @@ public without sharing class GSquareSalesArenaWrapper {
     /**
      * The additive-merge logic itself, extracted as a pure function of its
      * inputs so it is unit-testable WITHOUT inserting real
-     * GSquareSalesArenaMetric__mdt records -- Custom Metadata Types cannot be
+     * GSquareArenaTvMetric__mdt records -- Custom Metadata Types cannot be
      * created via DML in an Apex test (a real platform constraint, confirmed
      * while writing SalesArenaControllerTest), so testing this logic requires
      * accepting the override list as a parameter rather than querying it
      * internally. Tests build in-memory (uninserted) `new
-     * GSquareSalesArenaMetric__mdt(...)` instances and pass them directly here.
+     * GSquareArenaTvMetric__mdt(...)` instances and pass them directly here.
      */
     @TestVisible
     @TestVisible
-    private static List<MetricDef> mergeMetrics(List<MetricDef> defaults, List<GSquareSalesArenaMetric__mdt> overrides) {
+    private static List<MetricDef> mergeMetrics(List<MetricDef> defaults, List<GSquareArenaTvMetric__mdt> overrides) {
         configWarnings = new List<String>();
         Map<String, MetricDef> byKey = new Map<String, MetricDef>();
         for (MetricDef d : defaults) byKey.put(d.key, d);
 
         Set<String> seenKeys = new Set<String>();
-        for (GSquareSalesArenaMetric__mdt r : overrides) {
+        for (GSquareArenaTvMetric__mdt r : overrides) {
             if (String.isBlank(r.Metric_Key__c)) {
                 configWarnings.add('CMDT record ' + r.DeveloperName + ' skipped: Metric_Key__c is blank.');
                 continue;
@@ -275,7 +275,7 @@ public without sharing class GSquareSalesArenaWrapper {
      * result would be structurally invalid -- this is what stops one bad
      * record from producing a metric that later crashes SalesArenaService.
      */
-    private static MetricDef mergeOneOverride(GSquareSalesArenaMetric__mdt r, MetricDef existing) {
+    private static MetricDef mergeOneOverride(GSquareArenaTvMetric__mdt r, MetricDef existing) {
         MetricDef d = existing != null ? cloneMetric(existing) : new MetricDef();
         d.key = r.Metric_Key__c;
 
@@ -390,7 +390,7 @@ public without sharing class GSquareSalesArenaWrapper {
     /**
      * @TestVisible so tests can obtain the PURE hardcoded defaults directly,
      * rather than going through getMetrics() (which queries the real
-     * GSquareSalesArenaMetric__mdt table -- Custom Metadata records are NOT
+     * GSquareArenaTvMetric__mdt table -- Custom Metadata records are NOT
      * transaction-isolated the way normal test data is, so a test that used
      * getMetrics() as its "defaults" baseline would silently depend on
      * whatever CMDT records happen to actually exist in the deploy target,
@@ -607,7 +607,7 @@ defs.add(callsMade);
      * Confirmed business rule (2026-08-29) -- G-Talk inbound calls are not
      * genuine outbound telecaller activity and would inflate both metrics.
      * Applied as a single "NOT (A AND B)" clause in
-     * GSquareSalesArenaService.loadAggregate() for exactly the metric keys
+     * GSquareSalesArenaServiceWallTV_V2.loadAggregate() for exactly the metric keys
      * below, regardless of FTD/MTD mode -- this is a data-quality exclusion,
      * not a date-range concern, so it applies to both `metrics` and
      * `rangeMetrics` queries alike.
@@ -687,7 +687,7 @@ defs.add(callsMade);
         @AuraEnabled public String  denominatorKey;
         @AuraEnabled public Map<String, Integer> minVolumeByTier;
 
-        public MetricInfo(GSquareSalesArenaWrapper.MetricDef d) {
+        public MetricInfo(GSquareSalesArenaWrapperWallTV_V2.MetricDef d) {
             this.key             = d.key;
             this.label           = d.label;
             this.icon            = d.icon;
@@ -724,9 +724,9 @@ defs.add(callsMade);
         public PersonDTO(Id userId, String name) {
             this.userId = userId;
             this.name   = name;
-            this.tlName      = GSquareSalesArenaWrapper.UNASSIGNED;
-            this.managerName = GSquareSalesArenaWrapper.UNASSIGNED;
-            this.headName    = GSquareSalesArenaWrapper.UNASSIGNED;
+            this.tlName      = GSquareSalesArenaWrapperWallTV_V2.UNASSIGNED;
+            this.managerName = GSquareSalesArenaWrapperWallTV_V2.UNASSIGNED;
+            this.headName    = GSquareSalesArenaWrapperWallTV_V2.UNASSIGNED;
         }
 
         public void add(String metricKey, Decimal value) {

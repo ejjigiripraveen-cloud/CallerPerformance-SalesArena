@@ -20,8 +20,8 @@ public class GSquareArenaTestData {
       EmailEncodingKey = 'UTF-8',
       LanguageLocaleKey = 'en_US'
     );
-    u.put(GSquareSalesArenaWrapper.USER_FLD_ZONE, zone);
-    u.put(GSquareSalesArenaWrapper.USER_FLD_AVAILABILITY, true);
+    u.put(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE, zone);
+    u.put(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_AVAILABILITY, true);
     return u;
   }
 

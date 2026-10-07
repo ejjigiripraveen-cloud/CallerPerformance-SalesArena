@@ -6,12 +6,12 @@
         <members>GSquareArenaBookingEvents</members>
         <members>GSquareArenaBookingEventsTest</members>
         <members>GSquareArenaTestData</members>
-        <members>GSquareSalesArenaController</members>
-        <members>GSquareSalesArenaControllerTest</members>
-        <members>GSquareSalesArenaService</members>
-        <members>GSquareSalesArenaServiceTest</members>
-        <members>GSquareSalesArenaWrapper</members>
-        <members>GSquareSalesArenaWrapperTest</members>
+        <members>GSquareSalesArenaControllerWallTV_V2</members>
+        <members>GSquareSalesArenaControllerWallTV_V2Test</members>
+        <members>GSquareSalesArenaServiceWallTV_V2</members>
+        <members>GSquareSalesArenaServiceWallTV_V2Test</members>
+        <members>GSquareSalesArenaWrapperWallTV_V2</members>
+        <members>GSquareSalesArenaWrapperWallTV_V2Test</members>
         <name>ApexClass</name>
     </types>
     <types>
@@ -19,26 +19,26 @@
         <name>ApexTrigger</name>
     </types>
     <types>
-        <members>GSquareSalesArenaMetric__mdt.Aggregate_Type__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Date_Field_API__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Denominator_Key__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Display_Order__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Divisor__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Extra_Filter__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Is_Rate__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Metric_Key__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Metric_Label__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Min_Volume_JSON__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Numerator_Key__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Object_API__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Owner_Field_API__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Owner_Field_Alt__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Show_In_Boards__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Show_In_Funnel__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Status_Field_API__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Status_Values__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Unit__c</members>
-        <members>GSquareSalesArenaMetric__mdt.Value_Field_API__c</members>
+        <members>GSquareArenaTvMetric__mdt.Aggregate_Type__c</members>
+        <members>GSquareArenaTvMetric__mdt.Date_Field_API__c</members>
+        <members>GSquareArenaTvMetric__mdt.Denominator_Key__c</members>
+        <members>GSquareArenaTvMetric__mdt.Display_Order__c</members>
+        <members>GSquareArenaTvMetric__mdt.Divisor__c</members>
+        <members>GSquareArenaTvMetric__mdt.Extra_Filter__c</members>
+        <members>GSquareArenaTvMetric__mdt.Is_Rate__c</members>
+        <members>GSquareArenaTvMetric__mdt.Metric_Key__c</members>
+        <members>GSquareArenaTvMetric__mdt.Metric_Label__c</members>
+        <members>GSquareArenaTvMetric__mdt.Min_Volume_JSON__c</members>
+        <members>GSquareArenaTvMetric__mdt.Numerator_Key__c</members>
+        <members>GSquareArenaTvMetric__mdt.Object_API__c</members>
+        <members>GSquareArenaTvMetric__mdt.Owner_Field_API__c</members>
+        <members>GSquareArenaTvMetric__mdt.Owner_Field_Alt__c</members>
+        <members>GSquareArenaTvMetric__mdt.Show_In_Boards__c</members>
+        <members>GSquareArenaTvMetric__mdt.Show_In_Funnel__c</members>
+        <members>GSquareArenaTvMetric__mdt.Status_Field_API__c</members>
+        <members>GSquareArenaTvMetric__mdt.Status_Values__c</members>
+        <members>GSquareArenaTvMetric__mdt.Unit__c</members>
+        <members>GSquareArenaTvMetric__mdt.Value_Field_API__c</members>
         <members>GSquare_Arena_Baseline__c.Day_Of_Month__c</members>
         <members>GSquare_Arena_Baseline__c.Hour__c</members>
         <members>GSquare_Arena_Baseline__c.Kind__c</members>
@@ -58,13 +58,13 @@
         <name>CustomField</name>
     </types>
     <types>
-        <members>GSquareSalesArenaMetric__mdt</members>
+        <members>GSquareArenaTvMetric__mdt</members>
         <members>GSquare_Arena_Baseline__c</members>
         <members>GSquare_Arena_Booking__e</members>
         <name>CustomObject</name>
     </types>
     <types>
-        <members>Caller_Performace</members>
+        <members>Caller_Performance_WallTV_V2</members>
         <name>CustomTab</name>
     </types>
     <types>
@@ -75,7 +75,7 @@
         <members>gsquareArenaTeamTable</members>
         <members>gsquareArenaWatchlist</members>
         <members>gsquareArenaZoneRace</members>
-        <members>gsquareSalesArena</members>
+        <members>gsquareSalesArenaWallTV_V2</members>
         <name>LightningComponentBundle</name>
     </types>
     <types>
