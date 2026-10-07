@@ -596,9 +596,15 @@ export default class GsquareSalesArena extends LightningElement {
       const n = ((this.data && this.data.settings) || {}).watchlistMinWeak || 3;
       return `Below the zone average on ${n} or more measures`;
     }
-    const today = `Today in ${this.zoneParam}`;
-    const { pages, index } = this.teamPage;
-    return pages > 1 ? `${today} · page ${index + 1} of ${pages}` : today;
+    const { rows, pages, index } = this.teamPage;
+    const n = rows.length;
+    const count =
+      s.kind === "leaders"
+        ? `${n} ${n === 1 ? "person" : "people"}`
+        : `${n} ${n === 1 ? "TL" : "TLs"}`;
+    const parts = [`Today in ${this.zoneParam}`, count];
+    if (pages > 1) parts.push(`page ${index + 1} of ${pages}`);
+    return parts.join(" · ");
   }
 
   get isBoardScene() {

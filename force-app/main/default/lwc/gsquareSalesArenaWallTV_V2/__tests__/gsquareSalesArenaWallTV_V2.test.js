@@ -313,6 +313,17 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     expect(fit.textContent).toBe("100%");
   });
 
+  it("shows the TL count on the team leaders scene", async () => {
+    const el = mount();
+    getDashboard.emit(DATA);
+    await flush();
+    // before noon: five 30 s board scenes, then the TL table
+    jest.advanceTimersByTime(150 * 1000);
+    await flush();
+    expect(text(el, ".stitle")).toBe("Team leaders");
+    expect(text(el, ".ssub")).toBe("Today in Zone 1 · 1 TL");
+  });
+
   describe("zone picker", () => {
     const zoneSelect = (el) =>
       el.shadowRoot.querySelector(".zone-pick-select");
