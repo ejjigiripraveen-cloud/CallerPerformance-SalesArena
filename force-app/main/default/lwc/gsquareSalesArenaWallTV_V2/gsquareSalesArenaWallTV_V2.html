@@ -1,5 +1,5 @@
 <template>
-  <div class="fit" lwc:ref="fit">
+  <div class={fitClass} lwc:ref="fit">
   <div class={tvClass} style={tvStyle}>
     <template lwc:if={isReady}>
       <div class="screen" style={screenStyle}>
@@ -68,9 +68,7 @@
         <button class="tool" title="Zoom out" aria-label="Zoom out" onclick={zoomOut}>&minus;</button>
         <button class="tool tool-fit" title="Fit to screen" aria-label="Fit to screen" onclick={zoomFit}>{zoomLabel}</button>
         <button class="tool" title="Zoom in" aria-label="Zoom in" onclick={zoomIn}>+</button>
-        <template lwc:if={canFullscreen}>
-          <button class="tool" title={fullscreenTitle} aria-label={fullscreenTitle} onclick={toggleFullscreen}>&#x26F6;</button>
-        </template>
+        <button class="tool" title={expandTitle} aria-label={expandTitle} onclick={toggleExpanded}>&#x26F6;</button>
       <label class="zone-pick">
         <span class="zone-pick-label">Zone</span>
         <select

@@ -273,13 +273,25 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     expect(hero.staleState).toBe("red");
   });
 
-  it("has only the toolbar controls: zoom out, fit, zoom in and the zone picker", async () => {
+  it("has only the toolbar controls: zoom out, fit, zoom in, full screen and the zone picker", async () => {
     const el = mount();
     getDashboard.emit(DATA);
     await flush();
-    // jsdom has no Fullscreen API, so the full-screen button stays hidden
-    expect(el.shadowRoot.querySelectorAll(".tools button")).toHaveLength(3);
+    expect(el.shadowRoot.querySelectorAll(".tools button")).toHaveLength(4);
     expect(el.shadowRoot.querySelectorAll("select")).toHaveLength(1);
+  });
+
+  it("full screen covers the window with CSS and Esc leaves it", async () => {
+    const el = mount();
+    getDashboard.emit(DATA);
+    await flush();
+    const expand = el.shadowRoot.querySelectorAll(".tools button")[3];
+    expand.click();
+    await flush();
+    expect(el.shadowRoot.querySelector(".fit.expanded")).not.toBeNull();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await flush();
+    expect(el.shadowRoot.querySelector(".fit.expanded")).toBeNull();
   });
 
   it("zooms in steps of 10% and remembers the zoom", async () => {

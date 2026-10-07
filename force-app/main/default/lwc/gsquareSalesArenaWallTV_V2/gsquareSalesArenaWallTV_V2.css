@@ -19,11 +19,13 @@
   --arena-num-font:
     "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
 }
+/* Fills the tab like the Caller Performance tab. JS sets the exact px size
+   from the visible area; these are only the first-paint fallback. */
 .tv {
   container-type: size;
   position: relative;
-  aspect-ratio: 16 / 9;
-  width: min(100%, calc(100vh * 16 / 9));
+  width: 100%;
+  height: calc(100vh - 160px);
   margin: 0 auto;
   overflow: hidden;
   background: var(--arena-bg);
@@ -121,10 +123,12 @@
   width: 100%;
   overflow: auto;
 }
-.fit:fullscreen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Full screen without the (blocked) Fullscreen API: cover the whole window,
+   Salesforce header included -- the same technique as the Caller Performance tab. */
+.fit.expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
   background: var(--arena-bg);
 }
 /* Toolbar: top-right corner, dimmed so it never competes with the boards. */

@@ -33,7 +33,9 @@ const ZOOM_STORAGE_KEY = "gsquareArenaTv.zoom";
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.1;
-const FIT_BOTTOM_GAP_PX = 8;
+// Salesforce's utility bar (softphone, Omni-Channel) sits over the bottom of
+// the tab and is outside this component, so leave room for it.
+const FIT_BOTTOM_GAP_PX = 48;
 const TAKEOVER_SECONDS = 10;
 const DEFAULT_REFRESH_SECONDS = 180;
 const HERO_KEYS = ["allocation", "svConducted", "booking"];
@@ -58,14 +60,15 @@ export default class GsquareSalesArena extends LightningElement {
   selectedZone;
   zoneOptions = [];
 
-  fitWidth = 0; // px: largest 16:9 width that fits the space under the Salesforce header
+  fitWidth = 0; // px: the space visible under the Salesforce header
+  fitHeight = 0;
   zoom = 1;
-  canFullscreen = false;
-  isFullscreen = false;
+  // CSS "expanded" mode, as on the Caller Performance tab. The browser
+  // Fullscreen API is blocked by Lightning Web Security, so it is never touched.
+  isExpanded = false;
   boundMeasure = () => this.measure();
-  boundFullscreenChange = () => {
-    this.isFullscreen = Boolean(document.fullscreenElement);
-    this.measure();
+  boundKeydown = (e) => {
+    if (e.key === "Escape" && this.isExpanded) this.toggleExpanded();
   };
 
   data;
@@ -106,14 +109,14 @@ export default class GsquareSalesArena extends LightningElement {
     this.zoom = this.readStoredZoom();
     this.subscribeToBookings();
     window.addEventListener("resize", this.boundMeasure);
-    document.addEventListener("fullscreenchange", this.boundFullscreenChange);
+    window.addEventListener("keydown", this.boundKeydown);
   }
 
   disconnectedCallback() {
     clearInterval(this.tickTimer);
     clearInterval(this.refreshTimer);
     window.removeEventListener("resize", this.boundMeasure);
-    document.removeEventListener("fullscreenchange", this.boundFullscreenChange);
+    window.removeEventListener("keydown", this.boundKeydown);
   }
 
   renderedCallback() {
@@ -123,26 +126,31 @@ export default class GsquareSalesArena extends LightningElement {
 
   /* ------------------------------------------------------- fit and zoom */
 
-  /** Fits the 16:9 frame into the space actually visible below the Salesforce header. */
+  /**
+   * Fills the space actually visible: the whole tab below the Salesforce
+   * header (like the Caller Performance tab), or the whole window when expanded.
+   */
   measure() {
     const fit = this.refs && this.refs.fit;
     if (!fit) return;
-    if (!this.canFullscreen)
-      this.canFullscreen =
-        typeof fit.requestFullscreen === "function" &&
-        document.fullscreenEnabled !== false;
     const rect = fit.getBoundingClientRect();
-    const availH = this.isFullscreen
-      ? window.innerHeight
-      : window.innerHeight - Math.max(rect.top, 0) - FIT_BOTTOM_GAP_PX;
-    const availW = this.isFullscreen ? window.innerWidth : rect.width;
-    const w = Math.floor(Math.max(0, Math.min(availW, (availH * 16) / 9)));
+    const w = Math.floor(this.isExpanded ? window.innerWidth : rect.width);
+    const h = Math.floor(
+      this.isExpanded
+        ? window.innerHeight
+        : window.innerHeight - Math.max(rect.top, 0) - FIT_BOTTOM_GAP_PX
+    );
     if (w > 0 && w !== this.fitWidth) this.fitWidth = w;
+    if (h > 0 && h !== this.fitHeight) this.fitHeight = h;
   }
 
   get tvStyle() {
-    if (!this.fitWidth) return "";
-    return `width:${Math.round(this.fitWidth * this.zoom)}px`;
+    if (!this.fitWidth || !this.fitHeight) return "";
+    return `width:${Math.round(this.fitWidth * this.zoom)}px;height:${Math.round(this.fitHeight * this.zoom)}px`;
+  }
+
+  get fitClass() {
+    return this.isExpanded ? "fit expanded" : "fit";
   }
 
   get zoomLabel() {
@@ -180,24 +188,14 @@ export default class GsquareSalesArena extends LightningElement {
     }
   }
 
-  get fullscreenTitle() {
-    return this.isFullscreen ? "Exit full screen (Esc)" : "Full screen";
+  get expandTitle() {
+    return this.isExpanded ? "Exit full screen (Esc)" : "Full screen";
   }
 
-  toggleFullscreen() {
-    const blocked = (e) => {
-      // blocked by the platform: hide the button rather than fail silently again
-      console.warn("[Sales Arena] full screen unavailable", e);
-      this.canFullscreen = false;
-    };
-    try {
-      const p = document.fullscreenElement
-        ? document.exitFullscreen()
-        : this.refs.fit.requestFullscreen();
-      if (p && typeof p.catch === "function") p.catch(blocked);
-    } catch (e) {
-      blocked(e);
-    }
+  toggleExpanded() {
+    this.isExpanded = !this.isExpanded;
+    // re-measure after the class change has rendered
+    Promise.resolve().then(() => this.measure());
   }
 
   /** The picker's choice wins over a Lightning page's preset zone. */
