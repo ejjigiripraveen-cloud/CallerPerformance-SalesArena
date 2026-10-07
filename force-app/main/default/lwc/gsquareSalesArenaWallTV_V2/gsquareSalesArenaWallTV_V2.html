@@ -1,5 +1,6 @@
 <template>
-  <div class={tvClass}>
+  <div class="fit" lwc:ref="fit">
+  <div class={tvClass} style={tvStyle}>
     <template lwc:if={isReady}>
       <div class="screen" style={screenStyle}>
         <c-gsquare-arena-hero
@@ -63,6 +64,13 @@
       <div class="notice">Choose a zone from the menu at the top right.</div>
     </template>
     <template lwc:if={showZonePicker}>
+      <div class="tools">
+        <button class="tool" title="Zoom out" aria-label="Zoom out" onclick={zoomOut}>&minus;</button>
+        <button class="tool tool-fit" title="Fit to screen" aria-label="Fit to screen" onclick={zoomFit}>{zoomLabel}</button>
+        <button class="tool" title="Zoom in" aria-label="Zoom in" onclick={zoomIn}>+</button>
+        <template lwc:if={canFullscreen}>
+          <button class="tool" title={fullscreenTitle} aria-label={fullscreenTitle} onclick={toggleFullscreen}>&#x26F6;</button>
+        </template>
       <label class="zone-pick">
         <span class="zone-pick-label">Zone</span>
         <select
@@ -80,6 +88,8 @@
           </template>
         </select>
       </label>
+      </div>
     </template>
+  </div>
   </div>
 </template>

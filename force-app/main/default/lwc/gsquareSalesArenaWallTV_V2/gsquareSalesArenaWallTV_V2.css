@@ -115,21 +115,54 @@
   font-size: 4cqh;
   color: var(--arena-sub);
 }
-/* Zone picker: top-right corner, dimmed so it never competes with the boards. */
-.zone-pick {
+/* Wrapper measured by JS; the frame's width is set from the space left under
+   the Salesforce header. When zoomed past that, the wrapper scrolls. */
+.fit {
+  width: 100%;
+  overflow: auto;
+}
+.fit:fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--arena-bg);
+}
+/* Toolbar: top-right corner, dimmed so it never competes with the boards. */
+.tools {
   position: absolute;
   top: 1cqh;
   right: 1cqw;
   z-index: 4;
   display: flex;
   align-items: center;
-  gap: 0.6cqw;
+  gap: 0.5cqw;
   opacity: 0.55;
   transition: opacity 0.2s;
 }
-.zone-pick:hover,
-.zone-pick:focus-within {
+.tools:hover,
+.tools:focus-within {
   opacity: 1;
+}
+.tool {
+  min-width: 3.4cqh;
+  height: 3.4cqh;
+  padding: 0 0.8cqh;
+  font-size: 1.8cqh;
+  line-height: 1;
+  color: var(--arena-text);
+  background: var(--arena-panel2);
+  border: 1px solid var(--arena-faint);
+  border-radius: 0.6cqh;
+  cursor: pointer;
+}
+.tool-fit {
+  min-width: 6cqh;
+}
+.zone-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.6cqw;
+  margin-left: 0.6cqw;
 }
 .zone-pick-label {
   font-size: 1.5cqh;

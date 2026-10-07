@@ -29,6 +29,11 @@ const BOOKING_CHANNEL = "/event/GSquare_Arena_Booking__e";
 // Each TV's browser remembers its zone across the daily 08:30 reload.
 const ZONE_STORAGE_KEY = "gsquareArenaTv.zone";
 const MASTER_RECORD_TYPE_ID = "012000000000000AAA";
+const ZOOM_STORAGE_KEY = "gsquareArenaTv.zoom";
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2;
+const ZOOM_STEP = 0.1;
+const FIT_BOTTOM_GAP_PX = 8;
 const TAKEOVER_SECONDS = 10;
 const DEFAULT_REFRESH_SECONDS = 180;
 const HERO_KEYS = ["allocation", "svConducted", "booking"];
@@ -52,6 +57,16 @@ export default class GsquareSalesArena extends LightningElement {
 
   selectedZone;
   zoneOptions = [];
+
+  fitWidth = 0; // px: largest 16:9 width that fits the space under the Salesforce header
+  zoom = 1;
+  canFullscreen = false;
+  isFullscreen = false;
+  boundMeasure = () => this.measure();
+  boundFullscreenChange = () => {
+    this.isFullscreen = Boolean(document.fullscreenElement);
+    this.measure();
+  };
 
   data;
   people = [];
@@ -88,12 +103,101 @@ export default class GsquareSalesArena extends LightningElement {
     // eslint-disable-next-line @lwc/lwc/no-async-operation
     this.tickTimer = setInterval(() => this.tick(), 1000);
     this.selectedZone = this.readStoredZone();
+    this.zoom = this.readStoredZoom();
     this.subscribeToBookings();
+    window.addEventListener("resize", this.boundMeasure);
+    document.addEventListener("fullscreenchange", this.boundFullscreenChange);
   }
 
   disconnectedCallback() {
     clearInterval(this.tickTimer);
     clearInterval(this.refreshTimer);
+    window.removeEventListener("resize", this.boundMeasure);
+    document.removeEventListener("fullscreenchange", this.boundFullscreenChange);
+  }
+
+  renderedCallback() {
+    // cheap, and catches Salesforce header/layout changes as well as resizes
+    this.measure();
+  }
+
+  /* ------------------------------------------------------- fit and zoom */
+
+  /** Fits the 16:9 frame into the space actually visible below the Salesforce header. */
+  measure() {
+    const fit = this.refs && this.refs.fit;
+    if (!fit) return;
+    if (!this.canFullscreen)
+      this.canFullscreen =
+        typeof fit.requestFullscreen === "function" &&
+        document.fullscreenEnabled !== false;
+    const rect = fit.getBoundingClientRect();
+    const availH = this.isFullscreen
+      ? window.innerHeight
+      : window.innerHeight - Math.max(rect.top, 0) - FIT_BOTTOM_GAP_PX;
+    const availW = this.isFullscreen ? window.innerWidth : rect.width;
+    const w = Math.floor(Math.max(0, Math.min(availW, (availH * 16) / 9)));
+    if (w > 0 && w !== this.fitWidth) this.fitWidth = w;
+  }
+
+  get tvStyle() {
+    if (!this.fitWidth) return "";
+    return `width:${Math.round(this.fitWidth * this.zoom)}px`;
+  }
+
+  get zoomLabel() {
+    return `${Math.round(this.zoom * 100)}%`;
+  }
+
+  zoomIn() {
+    this.setZoom(this.zoom + ZOOM_STEP);
+  }
+
+  zoomOut() {
+    this.setZoom(this.zoom - ZOOM_STEP);
+  }
+
+  zoomFit() {
+    this.setZoom(1);
+  }
+
+  setZoom(z) {
+    const clamped = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    this.zoom = Math.round(clamped * 10) / 10;
+    try {
+      window.localStorage.setItem(ZOOM_STORAGE_KEY, String(this.zoom));
+    } catch (e) {
+      // storage blocked: zoom lasts until the next reload
+    }
+  }
+
+  readStoredZoom() {
+    try {
+      const z = parseFloat(window.localStorage.getItem(ZOOM_STORAGE_KEY));
+      return z >= ZOOM_MIN && z <= ZOOM_MAX ? z : 1;
+    } catch (e) {
+      return 1;
+    }
+  }
+
+  get fullscreenTitle() {
+    return this.isFullscreen ? "Exit full screen (Esc)" : "Full screen";
+  }
+
+  toggleFullscreen() {
+    const blocked = (e) => {
+      // blocked by the platform: hide the button rather than fail silently again
+      console.warn("[Sales Arena] full screen unavailable", e);
+      this.canFullscreen = false;
+    };
+    try {
+      const p = document.fullscreenElement
+        ? document.exitFullscreen()
+        : this.refs.fit.requestFullscreen();
+      if (p && typeof p.catch === "function") p.catch(blocked);
+    } catch (e) {
+      blocked(e);
+    }
   }
 
   /** The picker's choice wins over a Lightning page's preset zone. */

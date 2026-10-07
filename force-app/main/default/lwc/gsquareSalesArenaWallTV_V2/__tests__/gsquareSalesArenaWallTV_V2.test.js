@@ -273,12 +273,32 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     expect(hero.staleState).toBe("red");
   });
 
-  it("has no controls besides the zone picker", async () => {
+  it("has only the toolbar controls: zoom out, fit, zoom in and the zone picker", async () => {
     const el = mount();
     getDashboard.emit(DATA);
     await flush();
-    expect(el.shadowRoot.querySelectorAll("button")).toHaveLength(0);
+    // jsdom has no Fullscreen API, so the full-screen button stays hidden
+    expect(el.shadowRoot.querySelectorAll(".tools button")).toHaveLength(3);
     expect(el.shadowRoot.querySelectorAll("select")).toHaveLength(1);
+  });
+
+  it("zooms in steps of 10% and remembers the zoom", async () => {
+    const el = mount();
+    getDashboard.emit(DATA);
+    await flush();
+    const [out, fit, zin] = el.shadowRoot.querySelectorAll(".tools button");
+    expect(fit.textContent).toBe("100%");
+    zin.click();
+    await flush();
+    expect(fit.textContent).toBe("110%");
+    expect(window.localStorage.getItem("gsquareArenaTv.zoom")).toBe("1.1");
+    out.click();
+    out.click();
+    await flush();
+    expect(fit.textContent).toBe("90%");
+    fit.click();
+    await flush();
+    expect(fit.textContent).toBe("100%");
   });
 
   describe("zone picker", () => {
