@@ -2,8 +2,7 @@ import { LightningElement, api, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
 import getDashboard from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard";
 import { subscribe, onError as onEmpError } from "lightning/empApi";
-import { getObjectInfo, getPicklistValues } from "lightning/uiObjectInfoApi";
-import USER_OBJECT from "@salesforce/schema/User";
+import { getPicklistValues } from "lightning/uiObjectInfoApi";
 import USER_ZONE_FIELD from "@salesforce/schema/User.Zone__c";
 import {
   istParts,
@@ -29,6 +28,7 @@ import {
 const BOOKING_CHANNEL = "/event/GSquare_Arena_Booking__e";
 // Each TV's browser remembers its zone across the daily 08:30 reload.
 const ZONE_STORAGE_KEY = "gsquareArenaTv.zone";
+const MASTER_RECORD_TYPE_ID = "012000000000000AAA";
 const TAKEOVER_SECONDS = 10;
 const DEFAULT_REFRESH_SECONDS = 180;
 const HERO_KEYS = ["allocation", "svConducted", "booking"];
@@ -108,11 +108,10 @@ export default class GsquareSalesArena extends LightningElement {
 
   /* ----------------------------------------------------------- zone picker */
 
-  @wire(getObjectInfo, { objectApiName: USER_OBJECT })
-  userInfo;
-
+  // User has no record types (its defaultRecordTypeId is null), so ask with
+  // the master record type directly.
   @wire(getPicklistValues, {
-    recordTypeId: "$userInfo.data.defaultRecordTypeId",
+    recordTypeId: MASTER_RECORD_TYPE_ID,
     fieldApiName: USER_ZONE_FIELD
   })
   wiredZones({ data, error }) {

@@ -285,6 +285,14 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     const zoneSelect = (el) =>
       el.shadowRoot.querySelector(".zone-pick-select");
 
+    it("requests zones with the master record type (User has no record types)", async () => {
+      mount("");
+      await flush();
+      expect(getPicklistValues.getLastConfig()).toEqual(
+        expect.objectContaining({ recordTypeId: "012000000000000AAA" })
+      );
+    });
+
     it("lists every zone from the User.Zone__c picklist", async () => {
       const el = mount("");
       getPicklistValues.emit({
