@@ -17,4 +17,15 @@ private class GSquareSalesArenaControllerWallTV_V2Test {
         System.assertEquals(0, dto.people.size());
         System.assertEquals(0, dto.totals.get('svConducted'));
     }
+
+    @IsTest
+    static void failureReturnsFriendlyMessage() {
+        GSquareSalesArenaControllerWallTV_V2.forceFailure = true;
+        try {
+            GSquareSalesArenaControllerWallTV_V2.getDashboard('Ambur');
+            System.assert(false, 'expected AuraHandledException');
+        } catch (AuraHandledException e) {
+            System.assert(true);
+        }
+    }
 }

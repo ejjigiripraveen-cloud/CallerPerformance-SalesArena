@@ -9,11 +9,11 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
         System.runAs(new User(Id = UserInfo.getUserId())) {
             // runs the build: Asia/Kolkata so TODAY matches the IST test data, and full FLS
             insert GSquareArenaTestData.newUser('arsadm', admin.Id, null, null);
-            User tl = GSquareArenaTestData.newUser('arstl', tlProfile.Id, 'Arena Z1', null);
+            User tl = GSquareArenaTestData.newUser('arstl', tlProfile.Id, 'Ambur', null);
             insert tl;
             insert new List<User>{
-                GSquareArenaTestData.newUser('arsc1', caller.Id, 'Arena Z1', tl.Id),
-                GSquareArenaTestData.newUser('arsc2', caller.Id, 'Arena Z2', tl.Id)
+                GSquareArenaTestData.newUser('arsc1', caller.Id, 'Ambur', tl.Id),
+                GSquareArenaTestData.newUser('arsc2', caller.Id, 'Ranipet', tl.Id)
             };
         }
     }
@@ -47,7 +47,7 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
             GSquareArenaTestData.conductedVisit(u('arsc2').Id, today, 10, 0)
         };
         Test.startTest();
-        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Arena Z1');
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Ambur');
         Test.stopTest();
 
         System.assertEquals(true, dto.zoneConfigured);
@@ -58,8 +58,8 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
 
         Map<String, Decimal> race = new Map<String, Decimal>();
         for (GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry e : dto.zoneRace) race.put(e.zone, e.svConducted);
-        System.assertEquals(1, race.get('Arena Z1'));
-        System.assertEquals(1, race.get('Arena Z2'));
+        System.assertEquals(1, race.get('Ambur'));
+        System.assertEquals(1, race.get('Ranipet'));
 
         System.assertEquals(2, dto.tlTeamSizes.get(String.valueOf(u('arstl').Id)), 'team size spans zones');
     }
@@ -73,7 +73,7 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
         insert visits;
 
         Test.startTest();
-        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Arena Z1');
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Ambur');
         Test.stopTest();
 
         System.assertEquals(1, dto.totals.get('svConducted'));
@@ -85,8 +85,8 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
     static void readsBaselineForTodayAndTl() {
         Date today = GSquareArenaBaselineJob.istToday();
         Integer wd = GSquareArenaBaselineJob.weekdayOf(today);
-        String zoneScope = GSquareArenaBaselineJob.zoneScope('Arena Z1');
-        String tlScope = GSquareArenaBaselineJob.tlScope('Arena Z1', u('arstl').Id);
+        String zoneScope = GSquareArenaBaselineJob.zoneScope('Ambur');
+        String tlScope = GSquareArenaBaselineJob.tlScope('Ambur', u('arstl').Id);
         insert new List<GSquare_Arena_Baseline__c>{
             new GSquare_Arena_Baseline__c(Unique_Key__c = GSquareArenaBaselineJob.hourlyKey(zoneScope, 'svConducted', wd, 10),
                 Scope_Key__c = zoneScope, Metric_Key__c = 'svConducted', Kind__c = 'HOURLY', Weekday__c = wd, Hour__c = 10, Value__c = 7),
@@ -96,7 +96,7 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
                 Scope_Key__c = zoneScope, Metric_Key__c = 'booking', Kind__c = 'MTD', Day_Of_Month__c = today.day(), Value__c = 9)
         };
         Test.startTest();
-        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Arena Z1');
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Ambur');
         Test.stopTest();
 
         System.assertEquals(7, dto.baseline.hourly.get('svConducted')[10]);

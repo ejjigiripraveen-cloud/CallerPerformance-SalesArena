@@ -230,11 +230,20 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
       ' FROM User WHERE IsActive = true AND Profile.Name IN :profiles AND ' +
       GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE +
       ' != null';
+    // Tests can always see real users; keep their baselines to test users
+    // so a test run stays under the DML row limit.
+    if (Test.isRunningTest())
+      soql += ' AND Username LIKE \'%@arena.test\'';
     for (User u : Database.query(soql)) {
-      String zone = (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE);
-      List<String> scopes = new List<String>{ zoneScope(zone) };
-      if (u.ManagerId != null)
-        scopes.add(tlScope(zone, u.ManagerId));
+      // Multi-select zone: a user counts in every zone they belong to.
+      List<String> scopes = new List<String>();
+      for (String zone : GSquareSalesArenaWrapperWallTV_V2.zonesOf(
+          (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE)
+        )) {
+        scopes.add(zoneScope(zone));
+        if (u.ManagerId != null)
+          scopes.add(tlScope(zone, u.ManagerId));
+      }
       out.put(u.Id, scopes);
     }
     return out;

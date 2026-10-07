@@ -44,6 +44,14 @@ private class GSquareSalesArenaWrapperWallTV_V2Test {
     }
 
     @IsTest
+    static void zonesOfSplitsMultiSelect() {
+        System.assertEquals(new List<String>{ 'Chennai', 'Coimbatore' },
+            GSquareSalesArenaWrapperWallTV_V2.zonesOf('Chennai;Coimbatore'));
+        System.assertEquals(new List<String>{ 'Ambur' }, GSquareSalesArenaWrapperWallTV_V2.zonesOf('Ambur'));
+        System.assertEquals(0, GSquareSalesArenaWrapperWallTV_V2.zonesOf(null).size());
+    }
+
+    @IsTest
     static void personAccumulatesTodayAndMtd() {
         GSquareSalesArenaWrapperWallTV_V2.PersonDTO p = new GSquareSalesArenaWrapperWallTV_V2.PersonDTO(UserInfo.getUserId(), 'Test User');
         p.add('svConducted', 1);

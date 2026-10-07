@@ -195,14 +195,19 @@ export default class GsquareSalesArena extends LightningElement {
         b.callerId,
         (this.celebratedByCaller.get(b.callerId) || 0) + 1
       );
-    if (b.zone === this.zoneParam) {
+    // User.Zone__c is multi-select: "Chennai;Coimbatore" belongs to both zones.
+    const zones = (b.zone || "")
+      .split(";")
+      .map((z) => z.trim())
+      .filter(Boolean);
+    const ownZone = zones.includes(this.zoneParam);
+    if (ownZone) {
       this.zoneBookingsToday += 1;
       this.zoneBookingsMtd += 1;
     }
-    const ownZone = b.zone === this.zoneParam;
     b.countText = ownZone
-      ? `Booking ${this.zoneBookingsToday} today in ${b.zone}, ${this.zoneBookingsMtd} this month`
-      : `Booked in ${b.zone || "another zone"}`;
+      ? `Booking ${this.zoneBookingsToday} today in ${this.zoneParam}, ${this.zoneBookingsMtd} this month`
+      : `Booked in ${zones.join(", ") || "another zone"}`;
   }
 
   /** Fallback when the event stream is down: a caller's booking count rose. */

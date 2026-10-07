@@ -24,7 +24,7 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
 
     private String zone;                                    // null = TV page not configured
     private Map<Id, String> photoRawByUser = new Map<Id, String>();
-    private Map<Id, String> zoneByUser = new Map<Id, String>();   // every zone, for the race
+    private Map<Id, List<String>> zonesByUser = new Map<Id, List<String>>();   // every zone, for the race
     private Map<String, Integer> tlTeamSizes = new Map<String, Integer>();
 
     /* ---------------------------------------------------------------------
@@ -70,7 +70,8 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
             ' FROM ' + GSquareSalesArenaWrapperWallTV_V2.OBJ_USER +
             ' WHERE ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ACTIVE + ' = true' +
             ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PROFILE + ' IN :profiles' +
-            ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE + ' = :zoneFilter' +
+            // INCLUDES: zone is a multi-select picklist; a multi-zone user shows on each zone's TV
+            ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE + ' INCLUDES (:zoneFilter)' +
             ' WITH SECURITY_ENFORCED';
         String zoneFilter = zone;
 
@@ -98,7 +99,7 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
 
             peopleById.put(uid, new GSquareSalesArenaWrapperWallTV_V2.PersonDTO(uid, nm));
             peopleById.get(uid).profileName = prof;
-            peopleById.get(uid).zone = (String) so.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE);
+            peopleById.get(uid).zone = zone;   // this TV's zone, not the raw 'A;B' value
             peopleById.get(uid).availability = (Boolean) so.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_AVAILABILITY);
             peopleById.get(uid).initials = initialsOf(nm);
             photoRawByUser.put(uid, (String) so.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PHOTO));
@@ -494,8 +495,8 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
             ' FROM User WHERE IsActive = true AND Profile.Name IN :profiles';
         for (User u : Database.query(soql)) {
             if (GSquareSalesArenaWrapperWallTV_V2.EXCLUDED_USER_NAMES.contains(u.Name)) continue;
-            String z = (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE);
-            if (String.isNotBlank(z)) zoneByUser.put(u.Id, z);
+            List<String> zs = GSquareSalesArenaWrapperWallTV_V2.zonesOf((String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE));
+            if (!zs.isEmpty()) zonesByUser.put(u.Id, zs);
             if (u.ManagerId != null) {
                 String k = String.valueOf(u.ManagerId);
                 tlTeamSizes.put(k, (tlTeamSizes.containsKey(k) ? tlTeamSizes.get(k) : 0) + 1);
@@ -505,7 +506,9 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
 
     private List<GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry> zoneRace() {
         Map<String, Decimal> byZone = new Map<String, Decimal>();
-        for (String z : zoneByUser.values()) byZone.put(z, 0);
+        for (List<String> zs : zonesByUser.values()) {
+            for (String z : zs) byZone.put(z, 0);
+        }
         GSquareSalesArenaWrapperWallTV_V2.MetricDef def;
         for (GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics()) {
             if (d.key == 'svConducted') def = d;
@@ -517,9 +520,9 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
                 ' WHERE ' + String.join(wheres, ' AND ') + ' GROUP BY ' + def.ownerField + ' LIMIT 50000';
             try {
                 for (AggregateResult ar : Database.query(soql)) {
-                    String z = zoneByUser.get((Id) ar.get('ownerId'));
-                    if (z == null) continue;
-                    byZone.put(z, byZone.get(z) + (Decimal) ar.get('aggValue'));
+                    List<String> zs = zonesByUser.get((Id) ar.get('ownerId'));
+                    if (zs == null) continue;
+                    for (String z : zs) byZone.put(z, byZone.get(z) + (Decimal) ar.get('aggValue'));
                 }
             } catch (Exception e) {
                 warnings.add('Zone race failed: ' + e.getMessage());

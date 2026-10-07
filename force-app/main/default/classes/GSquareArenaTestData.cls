@@ -59,6 +59,15 @@ public class GSquareArenaTestData {
     SObject sv = Schema.getGlobalDescribe().get('Site_Visit__c').newSObject();
     sv.put('Scheduled_By__c', scheduledBy);
     sv.put('Status__c', 'Conducted');
+    // Org validation rule updateTheFLS_User: a conducted visit needs an FLS user.
+    if (
+      Schema.getGlobalDescribe()
+        .get('Site_Visit__c')
+        .getDescribe()
+        .fields.getMap()
+        .containsKey('fls_name__c')
+    )
+      sv.put('FLS_Name__c', scheduledBy);
     setIst(sv, 'Conducted_On__c', d, hour, minute);
     return sv;
   }

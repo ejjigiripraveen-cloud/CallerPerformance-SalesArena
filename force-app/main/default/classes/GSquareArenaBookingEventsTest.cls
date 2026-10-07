@@ -18,13 +18,13 @@ private class GSquareArenaBookingEventsTest {
       User tl = GSquareArenaTestData.newUser(
         'arbtl',
         tlProfile.Id,
-        'Arena Z1',
+        'Ambur',
         null
       );
       insert tl;
       insert new List<User>{
-        GSquareArenaTestData.newUser('arbc1', caller.Id, 'Arena Z1', tl.Id),
-        GSquareArenaTestData.newUser('arbsv', caller.Id, 'Arena Z2', tl.Id)
+        GSquareArenaTestData.newUser('arbc1', caller.Id, 'Ambur', tl.Id),
+        GSquareArenaTestData.newUser('arbsv', caller.Id, 'Ranipet', tl.Id)
       };
     }
   }
@@ -77,7 +77,7 @@ private class GSquareArenaBookingEventsTest {
     GSquare_Arena_Booking__e e = GSquareArenaBookingEvents.published[0];
     System.assertEquals(String.valueOf(o.Id), e.Opportunity_Id__c);
     System.assertEquals(String.valueOf(uid('arbc1')), e.Caller_Id__c);
-    System.assertEquals('Arena Z1', e.Zone__c);
+    System.assertEquals('Ambur', e.Zone__c);
   }
 
   @IsTest
@@ -163,8 +163,54 @@ private class GSquareArenaBookingEventsTest {
       GSquareArenaBookingEvents.published[0].Caller_Id__c
     );
     System.assertEquals(
-      'Arena Z2',
+      'Ranipet',
       GSquareArenaBookingEvents.published[0].Zone__c
     );
+  }
+
+  @IsTest
+  static void carriesPhotoAndProject() {
+    ContentVersion cv = new ContentVersion(
+      Title = 'arena photo',
+      PathOnClient = 'arena.png',
+      VersionData = Blob.valueOf('png')
+    );
+    insert cv;
+    Id docId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :cv.Id]
+    .ContentDocumentId;
+    User caller = new User(Id = uid('arbc1'));
+    // The org field is Text(18): it holds the bare ContentDocument Id.
+    caller.put(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PHOTO, String.valueOf(docId));
+    System.runAs(new User(Id = UserInfo.getUserId())) {
+      update caller;
+    }
+    GSquareArenaBookingEvents.PROJECT_FIELD = 'Name';
+    GSquareArenaBookingEvents.publishNewBookings(
+      new List<Opportunity>{
+        opp('007', 95000, 'Booked', today(), uid('arbc1'), null)
+      },
+      null
+    );
+    System.assertEquals(1, GSquareArenaBookingEvents.published.size());
+    System.assert(
+      GSquareArenaBookingEvents.published[0].Photo_Url__c.contains('versionId='),
+      GSquareArenaBookingEvents.published[0].Photo_Url__c
+    );
+  }
+
+  /** Real DML so GSquareArenaBookingTrigger runs; a non-booking stage publishes nothing. */
+  @IsTest
+  static void triggerRunsOnInsertAndUpdate() {
+    Opportunity o = new Opportunity(
+      Name = 'Arena trigger test',
+      StageName = '1.Site Tour Completed',
+      CloseDate = today()
+    );
+    Test.startTest();
+    insert o;
+    o.CloseDate = today().addDays(1);
+    update o;
+    Test.stopTest();
+    System.assertEquals(0, GSquareArenaBookingEvents.published.size());
   }
 }

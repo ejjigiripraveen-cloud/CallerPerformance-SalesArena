@@ -44,6 +44,16 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
     public static final String USER_FLD_CREATED_DATE = 'CreatedDate';    // standard field
     public static final String USER_FLD_PHOTO = 'Profile_Photo_Document_Id__c'; // full ContentDocument URL
 
+    /** USER_FLD_ZONE is a multi-select picklist: 'Chennai;Coimbatore' belongs to both zones. */
+    public static List<String> zonesOf(String raw) {
+        List<String> out = new List<String>();
+        if (String.isBlank(raw)) return out;
+        for (String z : raw.split(';')) {
+            if (String.isNotBlank(z)) out.add(z.trim());
+        }
+        return out;
+    }
+
     /** Metrics shown in the TV hero band; the only ones that need month-to-date. */
     public static final List<String> HERO_METRIC_KEYS = new List<String>{ 'allocation', 'svConducted', 'booking' };
 
@@ -240,7 +250,6 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
      * internally. Tests build in-memory (uninserted) `new
      * GSquareArenaTvMetric__mdt(...)` instances and pass them directly here.
      */
-    @TestVisible
     @TestVisible
     private static List<MetricDef> mergeMetrics(List<MetricDef> defaults, List<GSquareArenaTvMetric__mdt> overrides) {
         configWarnings = new List<String>();

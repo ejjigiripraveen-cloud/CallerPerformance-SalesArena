@@ -1,6 +1,6 @@
 @IsTest
 private class GSquareArenaBaselineJobTest {
-  private static final String ZONE = 'Test Zone A';
+  private static final String ZONE = 'Ambur';
 
   @TestSetup
   static void setup() {

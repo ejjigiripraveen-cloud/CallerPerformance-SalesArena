@@ -9,10 +9,13 @@
  */
 public without sharing class GSquareSalesArenaControllerWallTV_V2 {
 
+    @TestVisible private static Boolean forceFailure = false;   // lets a test cover the error path
+
     @AuraEnabled(cacheable=true)
     /** @param zone the TV page's Zone__c value; blank returns zoneConfigured = false. */
     public static GSquareSalesArenaWrapperWallTV_V2.DashboardDTO getDashboard(String zone) {
         try {
+            if (Test.isRunningTest() && forceFailure) throw new IllegalArgumentException('forced');
             return new GSquareSalesArenaServiceWallTV_V2().build(zone);
         } catch (Exception e) {
             // FIX (audit finding #17): the previous message included raw
