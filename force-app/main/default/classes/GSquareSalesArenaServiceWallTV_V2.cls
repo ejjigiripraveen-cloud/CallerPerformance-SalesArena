@@ -24,7 +24,7 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
 
     private String zone;                                    // null = TV page not configured
     private Map<Id, String> photoRawByUser = new Map<Id, String>();
-    private Map<Id, List<String>> zonesByUser = new Map<Id, List<String>>();   // every zone, for the race
+    private Map<Id, List<String>> zonesByUser = new Map<Id, List<String>>();   // every user's seating groups, for the race
     private Map<String, Integer> tlTeamSizes = new Map<String, Integer>();
 
     /* ---------------------------------------------------------------------
@@ -33,7 +33,8 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
      * user's timezone, so the shared TV user must be on Asia/Kolkata.
      * ------------------------------------------------------------------ */
     public GSquareSalesArenaWrapperWallTV_V2.DashboardDTO build(String zoneParam) {
-        zone = String.isBlank(zoneParam) ? null : zoneParam.trim();
+        // the TV shows a seating group; an older page preset with a raw zone maps to its group
+        zone = GSquareSalesArenaWrapperWallTV_V2.resolveZoneGroup(zoneParam);
         if (zone == null) return assemble();
 
         loadUsers();
@@ -58,6 +59,13 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
     /* ---------------------------------------------------------------------
      * 1. USER SCOPE + HIERARCHY SOURCE
      * ------------------------------------------------------------------ */
+    /** 'a','b' for a SOQL INCLUDES list (bind variables are not reliable inside INCLUDES). */
+    private static String quotedList(List<String> values) {
+        List<String> out = new List<String>();
+        for (String v : values) out.add('\'' + String.escapeSingleQuotes(v) + '\'');
+        return String.join(out, ',');
+    }
+
     private void loadUsers() {
         String soql =
             'SELECT Id, ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_NAME +
@@ -70,10 +78,9 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
             ' FROM ' + GSquareSalesArenaWrapperWallTV_V2.OBJ_USER +
             ' WHERE ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ACTIVE + ' = true' +
             ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PROFILE + ' IN :profiles' +
-            // INCLUDES: zone is a multi-select picklist; a multi-zone user shows on each zone's TV
-            ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE + ' INCLUDES (:zoneFilter)' +
+            // INCLUDES: zone is a multi-select picklist; anyone seated in any zone of this group
+            ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE + ' INCLUDES (' + quotedList(GSquareSalesArenaWrapperWallTV_V2.zonesInGroup(zone)) + ')' +
             ' WITH SECURITY_ENFORCED';
-        String zoneFilter = zone;
 
         // getUserProfilesInScope() (not the raw constant) so tests can override
         // with a Profile that genuinely exists in the running org.
@@ -495,7 +502,7 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
             ' FROM User WHERE IsActive = true AND Profile.Name IN :profiles';
         for (User u : Database.query(soql)) {
             if (GSquareSalesArenaWrapperWallTV_V2.EXCLUDED_USER_NAMES.contains(u.Name)) continue;
-            List<String> zs = GSquareSalesArenaWrapperWallTV_V2.zonesOf((String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE));
+            List<String> zs = GSquareSalesArenaWrapperWallTV_V2.zoneGroupsOf((String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE));
             if (!zs.isEmpty()) zonesByUser.put(u.Id, zs);
             if (u.ManagerId != null) {
                 String k = String.valueOf(u.ManagerId);

@@ -19,6 +19,14 @@ private class GSquareSalesArenaControllerWallTV_V2Test {
     }
 
     @IsTest
+    static void zoneGroupsForTheDropdown() {
+        System.assertEquals(
+            new List<String>{ 'Chennai', 'Coimbatore', 'Pune', 'Others' },
+            GSquareSalesArenaControllerWallTV_V2.getZoneGroups()
+        );
+    }
+
+    @IsTest
     static void failureReturnsFriendlyMessage() {
         GSquareSalesArenaControllerWallTV_V2.forceFailure = true;
         try {

@@ -2,8 +2,7 @@ import { LightningElement, api, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";
 import getDashboard from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard";
 import { subscribe, onError as onEmpError } from "lightning/empApi";
-import { getPicklistValues } from "lightning/uiObjectInfoApi";
-import USER_ZONE_FIELD from "@salesforce/schema/User.Zone__c";
+import getZoneGroups from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getZoneGroups";
 import {
   istParts,
   typicalByNow,
@@ -31,7 +30,6 @@ import {
 const BOOKING_CHANNEL = "/event/GSquare_Arena_Booking__e";
 // Each TV's browser remembers its zone across the daily 08:30 reload.
 const ZONE_STORAGE_KEY = "gsquareArenaTv.zone";
-const MASTER_RECORD_TYPE_ID = "012000000000000AAA";
 const ZOOM_STORAGE_KEY = "gsquareArenaTv.zoom";
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
@@ -213,14 +211,11 @@ export default class GsquareSalesArena extends LightningElement {
 
   /* ----------------------------------------------------------- zone picker */
 
-  // User has no record types (its defaultRecordTypeId is null), so ask with
-  // the master record type directly.
-  @wire(getPicklistValues, {
-    recordTypeId: MASTER_RECORD_TYPE_ID,
-    fieldApiName: USER_ZONE_FIELD
-  })
+  // Telecaller seating groups (Chennai, Coimbatore, Pune, Others), defined
+  // once in GSquareSalesArenaWrapperWallTV_V2.ZONE_GROUPS.
+  @wire(getZoneGroups)
   wiredZones({ data, error }) {
-    if (data) this.zoneOptions = data.values.map((v) => v.value);
+    if (data) this.zoneOptions = data;
     else if (error) console.warn("[Sales Arena] zone list failed", error);
   }
 
@@ -298,6 +293,12 @@ export default class GsquareSalesArena extends LightningElement {
       metrics: p.metrics || {},
       mtdMetrics: p.mtdMetrics || {}
     }));
+    // a remembered or preset raw zone ("Hosur") comes back as its group
+    // ("Coimbatore"): adopt it so the picker and the title show the group
+    if (data.zone && data.zone !== this.zoneParam) {
+      this.selectedZone = data.zone;
+      this.storeZone(data.zone);
+    }
     const firstLoad = !this.data;
     this.detectBookingsOnRefresh(people, firstLoad);
     this.rotateRanks(people);

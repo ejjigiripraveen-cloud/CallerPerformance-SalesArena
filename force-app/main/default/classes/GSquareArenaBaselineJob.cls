@@ -235,9 +235,9 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
     if (Test.isRunningTest())
       soql += ' AND Username LIKE \'%@arena.test\'';
     for (User u : Database.query(soql)) {
-      // Multi-select zone: a user counts in every zone they belong to.
+      // Multi-select zone: a user counts in every seating group they belong to.
       List<String> scopes = new List<String>();
-      for (String zone : GSquareSalesArenaWrapperWallTV_V2.zonesOf(
+      for (String zone : GSquareSalesArenaWrapperWallTV_V2.zoneGroupsOf(
           (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE)
         )) {
         scopes.add(zoneScope(zone));

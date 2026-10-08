@@ -52,6 +52,29 @@ private class GSquareSalesArenaWrapperWallTV_V2Test {
     }
 
     @IsTest
+    static void zonesMapToSeatingGroups() {
+        System.assertEquals('Chennai', GSquareSalesArenaWrapperWallTV_V2.zoneGroupOf('Ambur'));
+        System.assertEquals('Chennai', GSquareSalesArenaWrapperWallTV_V2.zoneGroupOf('Ranipet'));
+        System.assertEquals('Coimbatore', GSquareSalesArenaWrapperWallTV_V2.zoneGroupOf('Hosur'));
+        System.assertEquals('Others', GSquareSalesArenaWrapperWallTV_V2.zoneGroupOf('Bangalore'));
+        System.assertEquals('Pune', GSquareSalesArenaWrapperWallTV_V2.zoneGroupOf('Pune'));
+        System.assertEquals('Goa', GSquareSalesArenaWrapperWallTV_V2.zoneGroupOf('Goa'), 'unmapped zone stays visible');
+        System.assertEquals(null, GSquareSalesArenaWrapperWallTV_V2.zoneGroupOf(' '));
+        // multi-select collapses to distinct groups, in first-seen order
+        System.assertEquals(new List<String>{ 'Chennai', 'Others' },
+            GSquareSalesArenaWrapperWallTV_V2.zoneGroupsOf('Ambur;Trichy;Hyderabad;Chennai'));
+        System.assertEquals('Coimbatore', GSquareSalesArenaWrapperWallTV_V2.resolveZoneGroup('Coimbatore'));
+        System.assertEquals('Coimbatore', GSquareSalesArenaWrapperWallTV_V2.resolveZoneGroup(' Hosur '));
+        System.assertEquals(null, GSquareSalesArenaWrapperWallTV_V2.resolveZoneGroup(''));
+        System.assertEquals(2, GSquareSalesArenaWrapperWallTV_V2.zonesInGroup('Coimbatore').size());
+        System.assertEquals(new List<String>{ 'Goa' }, GSquareSalesArenaWrapperWallTV_V2.zonesInGroup('Goa'));
+        // every group in the dropdown has its zone list
+        for (String grp : GSquareSalesArenaWrapperWallTV_V2.ZONE_GROUP_ORDER) {
+            System.assert(GSquareSalesArenaWrapperWallTV_V2.ZONE_GROUPS.containsKey(grp), grp);
+        }
+    }
+
+    @IsTest
     static void personAccumulatesTodayAndMtd() {
         GSquareSalesArenaWrapperWallTV_V2.PersonDTO p = new GSquareSalesArenaWrapperWallTV_V2.PersonDTO(UserInfo.getUserId(), 'Test User');
         p.add('svConducted', 1);

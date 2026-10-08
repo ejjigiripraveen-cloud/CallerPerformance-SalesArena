@@ -1,6 +1,6 @@
 @IsTest
 private class GSquareArenaBaselineJobTest {
-  private static final String ZONE = 'Ambur';
+  private static final String ZONE = 'Pune'; // a group of one, so scope keys use the same name
 
   @TestSetup
   static void setup() {

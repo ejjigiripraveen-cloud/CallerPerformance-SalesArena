@@ -2,10 +2,18 @@ import { createElement } from "lwc";
 import GsquareSalesArena from "c/gsquareSalesArenaWallTV_V2";
 import getDashboard from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard";
 import { subscribe } from "lightning/empApi";
-import { getPicklistValues } from "lightning/uiObjectInfoApi";
+import getZoneGroups from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getZoneGroups";
 
 jest.mock(
   "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard",
+  () => {
+    const { createApexTestWireAdapter } = require("@salesforce/sfdx-lwc-jest");
+    return { default: createApexTestWireAdapter(jest.fn()) };
+  },
+  { virtual: true }
+);
+jest.mock(
+  "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getZoneGroups",
   () => {
     const { createApexTestWireAdapter } = require("@salesforce/sfdx-lwc-jest");
     return { default: createApexTestWireAdapter(jest.fn()) };
@@ -328,32 +336,34 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     const zoneSelect = (el) =>
       el.shadowRoot.querySelector(".zone-pick-select");
 
-    it("requests zones with the master record type (User has no record types)", async () => {
-      mount("");
-      await flush();
-      expect(getPicklistValues.getLastConfig()).toEqual(
-        expect.objectContaining({ recordTypeId: "012000000000000AAA" })
-      );
-    });
-
-    it("lists every zone from the User.Zone__c picklist", async () => {
+    it("lists the seating groups from Apex", async () => {
       const el = mount("");
-      getPicklistValues.emit({
-        values: [{ value: "Zone 1" }, { value: "Zone 2" }]
-      });
+      getZoneGroups.emit(["Chennai", "Coimbatore", "Pune", "Others"]);
       await flush();
       const values = [...zoneSelect(el).querySelectorAll("option")]
         .map((o) => o.value)
         .filter(Boolean);
-      expect(values).toEqual(["Zone 1", "Zone 2"]);
+      expect(values).toEqual(["Chennai", "Coimbatore", "Pune", "Others"]);
+    });
+
+    it("adopts the group Apex resolved for a remembered raw zone", async () => {
+      window.localStorage.setItem("gsquareArenaTv.zone", "Hosur");
+      const el = mount("");
+      await flush();
+      expect(getDashboard.getLastConfig()).toEqual({ zone: "Hosur" });
+      getDashboard.emit({ ...DATA, zone: "Coimbatore" });
+      await flush();
+      expect(window.localStorage.getItem("gsquareArenaTv.zone")).toBe(
+        "Coimbatore"
+      );
+      expect(getDashboard.getLastConfig()).toEqual({ zone: "Coimbatore" });
+      expect(el).toBeTruthy();
     });
 
     it("switches zone, reloads for it and remembers the choice", async () => {
       const el = mount("Zone 1");
       getDashboard.emit(DATA);
-      getPicklistValues.emit({
-        values: [{ value: "Zone 1" }, { value: "Zone 2" }]
-      });
+      getZoneGroups.emit(["Zone 1", "Zone 2"]);
       await flush();
       const select = zoneSelect(el);
       select.value = "Zone 2";

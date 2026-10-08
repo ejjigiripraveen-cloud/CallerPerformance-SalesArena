@@ -13,7 +13,7 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
             insert tl;
             insert new List<User>{
                 GSquareArenaTestData.newUser('arsc1', caller.Id, 'Ambur', tl.Id),
-                GSquareArenaTestData.newUser('arsc2', caller.Id, 'Ranipet', tl.Id)
+                GSquareArenaTestData.newUser('arsc2', caller.Id, 'Pune', tl.Id)
             };
         }
     }
@@ -51,6 +51,7 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
         Test.stopTest();
 
         System.assertEquals(true, dto.zoneConfigured);
+        System.assertEquals('Chennai', dto.zone, 'a raw zone preset resolves to its seating group');
         Set<Id> ids = new Set<Id>();
         for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : dto.people) ids.add(p.userId);
         System.assert(ids.contains(u('arsc1').Id), 'Z1 caller present');
@@ -58,8 +59,8 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
 
         Map<String, Decimal> race = new Map<String, Decimal>();
         for (GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry e : dto.zoneRace) race.put(e.zone, e.svConducted);
-        System.assertEquals(1, race.get('Ambur'));
-        System.assertEquals(1, race.get('Ranipet'));
+        System.assertEquals(1, race.get('Chennai'));
+        System.assertEquals(1, race.get('Pune'));
 
         System.assertEquals(2, dto.tlTeamSizes.get(String.valueOf(u('arstl').Id)), 'team size spans zones');
     }
@@ -85,8 +86,8 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
     static void readsBaselineForTodayAndTl() {
         Date today = GSquareArenaBaselineJob.istToday();
         Integer wd = GSquareArenaBaselineJob.weekdayOf(today);
-        String zoneScope = GSquareArenaBaselineJob.zoneScope('Ambur');
-        String tlScope = GSquareArenaBaselineJob.tlScope('Ambur', u('arstl').Id);
+        String zoneScope = GSquareArenaBaselineJob.zoneScope('Chennai');
+        String tlScope = GSquareArenaBaselineJob.tlScope('Chennai', u('arstl').Id);
         insert new List<GSquare_Arena_Baseline__c>{
             new GSquare_Arena_Baseline__c(Unique_Key__c = GSquareArenaBaselineJob.hourlyKey(zoneScope, 'svConducted', wd, 10),
                 Scope_Key__c = zoneScope, Metric_Key__c = 'svConducted', Kind__c = 'HOURLY', Weekday__c = wd, Hour__c = 10, Value__c = 7),

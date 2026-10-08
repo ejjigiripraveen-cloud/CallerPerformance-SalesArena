@@ -54,6 +54,54 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
         return out;
     }
 
+    /**
+     * TV zones are telecaller SEATING groups, not project zones: every
+     * User.Zone__c value belongs to one group, and the dropdown, the user
+     * filter, the zone race, baselines and booking celebrations all use the
+     * group. ZONE_GROUP_ORDER is the dropdown order.
+     */
+    public static final List<String> ZONE_GROUP_ORDER = new List<String>{
+        'Chennai', 'Coimbatore', 'Pune', 'Others'
+    };
+    public static final Map<String, List<String>> ZONE_GROUPS = new Map<String, List<String>>{
+        'Chennai'    => new List<String>{ 'Ambur', 'Chennai', 'Trichy', 'Madurai', 'Mysore', 'Ranipet' },
+        'Coimbatore' => new List<String>{ 'Coimbatore', 'Hosur' },
+        'Pune'       => new List<String>{ 'Pune' },
+        'Others'     => new List<String>{ 'Ballari', 'Bangalore', 'Hyderabad' }
+    };
+
+    /** Group of one Zone__c value; an unmapped value stays its own group so nobody silently disappears. */
+    public static String zoneGroupOf(String zone) {
+        if (String.isBlank(zone)) return null;
+        String z = zone.trim();
+        for (String grp : ZONE_GROUP_ORDER) {
+            if (ZONE_GROUPS.get(grp).contains(z)) return grp;
+        }
+        return z;
+    }
+
+    /** Groups for a raw multi-select value, de-duplicated: 'Ambur;Trichy' is just Chennai. */
+    public static List<String> zoneGroupsOf(String raw) {
+        List<String> out = new List<String>();
+        for (String z : zonesOf(raw)) {
+            String grp = zoneGroupOf(z);
+            if (!out.contains(grp)) out.add(grp);
+        }
+        return out;
+    }
+
+    /** A TV's zone parameter as a group: a group name, or a raw zone preset on an older page. */
+    public static String resolveZoneGroup(String param) {
+        if (String.isBlank(param)) return null;
+        String p = param.trim();
+        return ZONE_GROUPS.containsKey(p) ? p : zoneGroupOf(p);
+    }
+
+    /** The Zone__c values that make up a group. */
+    public static List<String> zonesInGroup(String grp) {
+        return ZONE_GROUPS.containsKey(grp) ? ZONE_GROUPS.get(grp) : new List<String>{ grp };
+    }
+
     /** Metrics shown in the TV hero band; the only ones that need month-to-date. */
     public static final List<String> HERO_METRIC_KEYS = new List<String>{ 'allocation', 'svConducted', 'booking' };
 

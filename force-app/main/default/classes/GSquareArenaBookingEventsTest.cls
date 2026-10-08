@@ -24,7 +24,7 @@ private class GSquareArenaBookingEventsTest {
       insert tl;
       insert new List<User>{
         GSquareArenaTestData.newUser('arbc1', caller.Id, 'Ambur', tl.Id),
-        GSquareArenaTestData.newUser('arbsv', caller.Id, 'Ranipet', tl.Id)
+        GSquareArenaTestData.newUser('arbsv', caller.Id, 'Pune', tl.Id)
       };
     }
   }
@@ -77,7 +77,7 @@ private class GSquareArenaBookingEventsTest {
     GSquare_Arena_Booking__e e = GSquareArenaBookingEvents.published[0];
     System.assertEquals(String.valueOf(o.Id), e.Opportunity_Id__c);
     System.assertEquals(String.valueOf(uid('arbc1')), e.Caller_Id__c);
-    System.assertEquals('Ambur', e.Zone__c);
+    System.assertEquals('Chennai', e.Zone__c); // Ambur seats in the Chennai group
   }
 
   @IsTest
@@ -163,7 +163,7 @@ private class GSquareArenaBookingEventsTest {
       GSquareArenaBookingEvents.published[0].Caller_Id__c
     );
     System.assertEquals(
-      'Ranipet',
+      'Pune',
       GSquareArenaBookingEvents.published[0].Zone__c
     );
   }

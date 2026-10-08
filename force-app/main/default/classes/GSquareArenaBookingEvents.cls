@@ -90,7 +90,13 @@ public without sharing class GSquareArenaBookingEvents {
           Caller_Initials__c = GSquareSalesArenaServiceWallTV_V2.initialsOf(u.Name),
           Photo_Url__c = photos.get(u.Id),
           Tl_Name__c = u.Manager == null ? null : u.Manager.Name,
-          Zone__c = (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE),
+          // seating groups ('Chennai;Coimbatore'), so each group's TV celebrates its own
+          Zone__c = String.join(
+            GSquareSalesArenaWrapperWallTV_V2.zoneGroupsOf(
+              (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE)
+            ),
+            ';'
+          ),
           Project__c = projects.get(oppId)
         )
       );
