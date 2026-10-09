@@ -603,12 +603,12 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
         booking.objectApi     = OBJ_OPPORTUNITY;
         // CONFIRMED (2026-10-09): a booking is an Opportunity CREATED in the
         // period with Total Receipts > 90,000, not Cancelled, whose Presales
-        // user TL or SV User is filled. Presales Owner AND SV User each get the
+        // Owner or SV User is filled. Presales Owner AND SV User each get the
         // credit; zone totals count it once.
         booking.ownerField    = 'Presales_Owner__c';
         booking.ownerFieldAlt = 'SV_User__c';
         booking.creditBothOwners = true;
-        booking.requireAnyFieldSet = new List<String>{ 'Presales_user_TL__c', 'SV_User__c' };
+        booking.requireAnyFieldSet = new List<String>{ 'Presales_Owner__c', 'SV_User__c' };
         booking.dateField     = 'CreatedDate';
         booking.statusField   = 'StageName';
         booking.statusValues  = new List<String>();  // exclusion handled below

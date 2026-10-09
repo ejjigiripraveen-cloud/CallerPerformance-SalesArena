@@ -110,7 +110,7 @@ private class GSquareArenaMtdExportTest {
         String w = GSquareArenaMtdExport.baseWhere(d);
         System.assert(w.startsWith('CreatedDate = THIS_MONTH'), w);
         System.assert(w.contains('Total_Receipts__c > 90000'), w);
-        System.assert(w.contains('(Presales_user_TL__c != null OR SV_User__c != null)'), w);
+        System.assert(w.contains('(Presales_Owner__c != null OR SV_User__c != null)'), w);
         System.assert(w.contains('Total_Receipts__c'), w);
       }
       if (d.key == 'svConducted') {

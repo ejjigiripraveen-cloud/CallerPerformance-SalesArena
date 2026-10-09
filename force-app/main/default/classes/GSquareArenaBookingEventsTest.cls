@@ -50,8 +50,6 @@ private class GSquareArenaBookingEventsTest {
       'Total_Receipts__c' => receipts,
       'Presales_Owner__c' => presales,
       'SV_User__c' => svUser,
-      // a booking needs Presales user TL or SV User: give the presales side its TL
-      'Presales_user_TL__c' => presales == null ? null : uid('arbtl'),
       // a booking is dated by when the Opportunity was created (noon IST)
       'CreatedDate' => GSquareArenaBaselineJob.istToGmt(createdDay, 12, 0)
     };
@@ -130,11 +128,16 @@ private class GSquareArenaBookingEventsTest {
   }
 
   @IsTest
-  static void needsPresalesTlOrSvUser() {
-    Opportunity o = opp('009', 95000, 'Booked', today(), uid('arbc1'), null);
-    o.put('Presales_user_TL__c', null); // Presales Owner only: no TL, no SV User
-    GSquareArenaBookingEvents.publishNewBookings(new List<Opportunity>{ o }, null);
-    System.assertEquals(0, GSquareArenaBookingEvents.published.size());
+  static void needsPresalesOwnerOrSvUser() {
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def;
+    for (GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics())
+      if (d.key == 'booking')
+        def = d;
+    // neither Presales Owner nor SV User: not a booking
+    System.assertEquals(false, GSquareArenaBookingEvents.qualifies(opp('009', 95000, 'Booked', today(), null, null), def));
+    // either one is enough
+    System.assertEquals(true, GSquareArenaBookingEvents.qualifies(opp('010', 95000, 'Booked', today(), uid('arbc1'), null), def));
+    System.assertEquals(true, GSquareArenaBookingEvents.qualifies(opp('011', 95000, 'Booked', today(), null, uid('arbsv')), def));
   }
 
   @IsTest
