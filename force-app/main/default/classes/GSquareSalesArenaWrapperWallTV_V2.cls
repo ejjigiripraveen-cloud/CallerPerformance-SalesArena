@@ -126,6 +126,23 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
         return out;
     }
 
+    /** "(A != null OR B != null)" for requireAnyFieldSet; null when the metric has none. */
+    public static String anyFieldSetClause(MetricDef d) {
+        if (d.requireAnyFieldSet == null || d.requireAnyFieldSet.isEmpty()) return null;
+        List<String> parts = new List<String>();
+        for (String f : d.requireAnyFieldSet) parts.add(String.escapeSingleQuotes(f) + ' != null');
+        return '(' + String.join(parts, ' OR ') + ')';
+    }
+
+    /** The same rule for an in-memory record (trigger context). */
+    public static Boolean anyFieldSet(SObject rec, MetricDef d) {
+        if (d.requireAnyFieldSet == null || d.requireAnyFieldSet.isEmpty()) return true;
+        for (String f : d.requireAnyFieldSet) {
+            if (rec.get(f) != null) return true;
+        }
+        return false;
+    }
+
     /** The Zone__c values that make up a group. */
     public static List<String> zonesInGroup(String grp) {
         return ZONE_GROUPS.containsKey(grp) ? ZONE_GROUPS.get(grp) : new List<String>{ grp };
@@ -258,6 +275,7 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
         public String  ownerField;      // lookup(User) that attributes the record
         public String  ownerFieldAlt;   // fallback owner when primary is null
         public Boolean creditBothOwners = false; // true: ownerField AND ownerFieldAlt each get credit
+        public List<String> requireAnyFieldSet;  // record counts only if at least one of these fields is filled
         public String  dateField;       // date/datetime field the TODAY filter uses
         public String  statusField;
         public List<String> statusValues;   // empty = no status filter
@@ -453,6 +471,7 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
         d.showInBoards = src.showInBoards; d.isRate = src.isRate;
         d.objectApi = src.objectApi; d.ownerField = src.ownerField; d.ownerFieldAlt = src.ownerFieldAlt;
         d.creditBothOwners = src.creditBothOwners;
+        d.requireAnyFieldSet = src.requireAnyFieldSet == null ? null : src.requireAnyFieldSet.clone();
         d.dateField = src.dateField; d.statusField = src.statusField;
         d.statusValues = src.statusValues == null ? null : src.statusValues.clone();
         d.aggregateType = src.aggregateType; d.valueField = src.valueField;
@@ -583,11 +602,13 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
         booking.isRate        = false;
         booking.objectApi     = OBJ_OPPORTUNITY;
         // CONFIRMED (2026-10-09): a booking is an Opportunity CREATED in the
-        // period with Total Receipts > 90,000, not Cancelled. Presales Owner
-        // AND SV User each get the credit; zone totals count it once.
+        // period with Total Receipts > 90,000, not Cancelled, whose Presales
+        // user TL or SV User is filled. Presales Owner AND SV User each get the
+        // credit; zone totals count it once.
         booking.ownerField    = 'Presales_Owner__c';
         booking.ownerFieldAlt = 'SV_User__c';
         booking.creditBothOwners = true;
+        booking.requireAnyFieldSet = new List<String>{ 'Presales_user_TL__c', 'SV_User__c' };
         booking.dateField     = 'CreatedDate';
         booking.statusField   = 'StageName';
         booking.statusValues  = new List<String>();  // exclusion handled below

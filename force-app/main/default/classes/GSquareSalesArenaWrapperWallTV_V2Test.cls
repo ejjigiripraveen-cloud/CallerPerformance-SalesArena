@@ -17,6 +17,14 @@ private class GSquareSalesArenaWrapperWallTV_V2Test {
         System.assertEquals('SV_User__c', m.get('booking').ownerFieldAlt);
         System.assertEquals('CreatedDate', m.get('booking').dateField);
         System.assertEquals(true, m.get('booking').creditBothOwners);
+        System.assertEquals('(Presales_user_TL__c != null OR SV_User__c != null)',
+            GSquareSalesArenaWrapperWallTV_V2.anyFieldSetClause(m.get('booking')));
+        System.assertEquals(null, GSquareSalesArenaWrapperWallTV_V2.anyFieldSetClause(m.get('allocation')));
+        Opportunity none = new Opportunity();
+        System.assertEquals(false, GSquareSalesArenaWrapperWallTV_V2.anyFieldSet(none, m.get('booking')));
+        none.put('SV_User__c', UserInfo.getUserId());
+        System.assertEquals(true, GSquareSalesArenaWrapperWallTV_V2.anyFieldSet(none, m.get('booking')));
+        System.assertEquals(true, GSquareSalesArenaWrapperWallTV_V2.anyFieldSet(new Lead(), m.get('allocation')));
         System.assertEquals(GSquareSalesArenaWrapperWallTV_V2.HERO_METRIC_KEYS.size(), 3);
         for (String k : GSquareSalesArenaWrapperWallTV_V2.HERO_METRIC_KEYS) System.assert(m.containsKey(k), 'hero key ' + k);
     }

@@ -39,6 +39,7 @@ public without sharing class GSquareArenaBookingEvents {
     return receipts != null &&
       receipts > GSquareSalesArenaWrapperWallTV_V2.BOOKING_MIN_RECEIPTS &&
       o.StageName != GSquareSalesArenaWrapperWallTV_V2.BOOKING_EXCLUDED_STAGE &&
+      GSquareSalesArenaWrapperWallTV_V2.anyFieldSet(o, def) &&
       istDate(o.get(def.dateField)) == GSquareArenaBaselineJob.istToday();
   }
 

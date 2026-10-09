@@ -291,6 +291,9 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
             String validated = validateOneFilterCondition(raw, fields, def.key, warningsOut);
             if (validated != null) out.add(validated);
         }
+        // built from code constants (not CMDT), so it bypasses the single-condition validator
+        String anyOf = GSquareSalesArenaWrapperWallTV_V2.anyFieldSetClause(def);
+        if (anyOf != null) out.add(anyOf);
         return out;
     }
 

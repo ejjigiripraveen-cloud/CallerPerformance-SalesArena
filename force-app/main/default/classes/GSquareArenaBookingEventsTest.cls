@@ -50,6 +50,8 @@ private class GSquareArenaBookingEventsTest {
       'Total_Receipts__c' => receipts,
       'Presales_Owner__c' => presales,
       'SV_User__c' => svUser,
+      // a booking needs Presales user TL or SV User: give the presales side its TL
+      'Presales_user_TL__c' => presales == null ? null : uid('arbtl'),
       // a booking is dated by when the Opportunity was created (noon IST)
       'CreatedDate' => GSquareArenaBaselineJob.istToGmt(createdDay, 12, 0)
     };
@@ -125,6 +127,14 @@ private class GSquareArenaBookingEventsTest {
       new Map<Id, Opportunity>{ before.Id => before }
     );
     System.assertEquals(1, GSquareArenaBookingEvents.published.size());
+  }
+
+  @IsTest
+  static void needsPresalesTlOrSvUser() {
+    Opportunity o = opp('009', 95000, 'Booked', today(), uid('arbc1'), null);
+    o.put('Presales_user_TL__c', null); // Presales Owner only: no TL, no SV User
+    GSquareArenaBookingEvents.publishNewBookings(new List<Opportunity>{ o }, null);
+    System.assertEquals(0, GSquareArenaBookingEvents.published.size());
   }
 
   @IsTest
