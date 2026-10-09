@@ -153,7 +153,7 @@ public without sharing class GSquareArenaMtdExport {
   private Sheet bookings(GSquareSalesArenaWrapperWallTV_V2.MetricDef d) {
     Sheet s = new Sheet(
       'Booking',
-      new List<String>{ 'Opportunity Name', 'Booking Reference Number', 'Allotment / Booking Reference No', 'Project', 'Unit', 'Flat No', 'Plot No', 'Tower', 'Booking Date', 'Stage', 'Total Receipts', 'Credited To', 'Credited Via', 'TL', 'Zone' }
+      new List<String>{ 'Opportunity Name', 'Booking Reference Number', 'Allotment / Booking Reference No', 'Project', 'Unit', 'Flat No', 'Plot No', 'Tower', 'Created Date', 'Stage', 'Total Receipts', 'Credited To', 'Credited Via', 'TL', 'Zone' }
     );
     String soql =
       'SELECT Id, Name, Booking_Reference_Number__c, Allotment_Booking_Reference_Number__c, Project__c,' +
@@ -164,21 +164,26 @@ public without sharing class GSquareArenaMtdExport {
       ' ORDER BY ' + d.dateField + ' LIMIT ' + MAX_ROWS;
     try {
       for (SObject r : Database.query(soql)) {
-        Id owner = (Id) r.get(d.ownerField);
-        String via = 'Presales Owner';
-        if (owner == null) {
-          owner = (Id) r.get(d.ownerFieldAlt);
-          via = 'SV User';
+        // one row per Opportunity (= the tile's count), naming every credited
+        // person in this zone: Presales Owner and/or SV User
+        List<String> names = new List<String>(), via = new List<String>(), tls = new List<String>(), zones = new List<String>();
+        for (Id owner : GSquareSalesArenaWrapperWallTV_V2.creditedOwners(r, d)) {
+          User u = users.get(owner);
+          if (u == null)
+            continue; // credited to someone outside this zone, as on the TV
+          names.add(u.Name);
+          via.add(owner == (Id) r.get(d.ownerField) ? 'Presales Owner' : 'SV User');
+          tls.add(tlOf(u));
+          zones.add(zoneOf(u));
         }
-        User u = owner == null ? null : users.get(owner);
-        if (u == null)
-          continue; // credited to someone outside this zone, as on the TV
+        if (names.isEmpty())
+          continue;
         s.add(new List<String>{
           text(r, 'Name'), text(r, 'Booking_Reference_Number__c'), text(r, 'Allotment_Booking_Reference_Number__c'),
           text(r, 'Project__c'), text(r, 'Apartment__r.Name'), text(r, 'Apartment__r.Flat_No__c'),
           text(r, 'Apartment__r.Unit_Number__c'), text(r, 'Apartment__r.Tower__c'),
           text(r, d.dateField), text(r, 'StageName'), text(r, 'Total_Receipts__c'),
-          u.Name, via, tlOf(u), zoneOf(u)
+          String.join(names, ' / '), String.join(via, ' / '), String.join(tls, ' / '), String.join(zones, ' / ')
         });
       }
     } catch (Exception e) {

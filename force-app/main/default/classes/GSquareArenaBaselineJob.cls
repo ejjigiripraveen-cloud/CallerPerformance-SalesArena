@@ -298,14 +298,22 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
       (String.isNotBlank(def.ownerFieldAlt) ? ', ' + def.ownerFieldAlt : '');
   }
 
-  private static Id ownerOf(
+  /**
+   * Scopes a record counts in: every credited owner's scopes, each scope
+   * once, so a booking shared by two people in one zone is one in that zone.
+   */
+  private static Set<String> scopesOf(
     SObject so,
-    GSquareSalesArenaWrapperWallTV_V2.MetricDef def
+    GSquareSalesArenaWrapperWallTV_V2.MetricDef def,
+    Map<Id, List<String>> scopesByUser
   ) {
-    Id owner = (Id) so.get(def.ownerField);
-    if (owner == null && String.isNotBlank(def.ownerFieldAlt))
-      owner = (Id) so.get(def.ownerFieldAlt);
-    return owner;
+    Set<String> out = new Set<String>();
+    for (Id owner : GSquareSalesArenaWrapperWallTV_V2.creditedOwners(so, def)) {
+      List<String> scopes = scopesByUser.get(owner);
+      if (scopes != null)
+        out.addAll(scopes);
+    }
+    return out;
   }
 
   /** Rows for one window. Bind variables are referenced by name in the SOQL. */
@@ -346,9 +354,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
   ) {
     Map<String, List<Decimal>> perHour = new Map<String, List<Decimal>>();
     for (SObject so : fetch(def, isDateTime, d, d)) {
-      List<String> scopes = scopesByUser.get(ownerOf(so, def));
-      if (scopes == null)
-        continue;
+      Set<String> scopes = scopesOf(so, def, scopesByUser);
       for (String scope : scopes) {
         if (!perHour.containsKey(scope))
           perHour.put(scope, zeros());
@@ -399,9 +405,7 @@ public without sharing class GSquareArenaBaselineJob implements Schedulable {
     Date lastEnd = lastStart.addDays(cap - 1);
     Map<String, Decimal> out = new Map<String, Decimal>();
     for (SObject so : fetch(def, isDateTime, lastStart, lastEnd)) {
-      List<String> scopes = scopesByUser.get(ownerOf(so, def));
-      if (scopes == null)
-        continue;
+      Set<String> scopes = scopesOf(so, def, scopesByUser);
       for (String scope : scopes) {
         out.put(scope, (out.containsKey(scope) ? out.get(scope) : 0) + 1);
       }

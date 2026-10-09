@@ -108,7 +108,8 @@ private class GSquareArenaMtdExportTest {
     for (GSquareSalesArenaWrapperWallTV_V2.MetricDef d : GSquareSalesArenaWrapperWallTV_V2.getMetrics()) {
       if (d.key == 'booking') {
         String w = GSquareArenaMtdExport.baseWhere(d);
-        System.assert(w.startsWith('Booking_Date__c = THIS_MONTH'), w);
+        System.assert(w.startsWith('CreatedDate = THIS_MONTH'), w);
+        System.assert(w.contains('Total_Receipts__c > 90000'), w);
         System.assert(w.contains('Total_Receipts__c'), w);
       }
       if (d.key == 'svConducted') {

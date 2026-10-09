@@ -37,7 +37,7 @@ public without sharing class GSquareArenaBookingEvents {
       return false;
     Decimal receipts = (Decimal) o.get(FLD_RECEIPTS);
     return receipts != null &&
-      receipts >= GSquareSalesArenaWrapperWallTV_V2.BOOKING_MIN_RECEIPTS &&
+      receipts > GSquareSalesArenaWrapperWallTV_V2.BOOKING_MIN_RECEIPTS &&
       o.StageName != GSquareSalesArenaWrapperWallTV_V2.BOOKING_EXCLUDED_STAGE &&
       istDate(o.get(def.dateField)) == GSquareArenaBaselineJob.istToday();
   }
@@ -50,21 +50,23 @@ public without sharing class GSquareArenaBookingEvents {
     if (def == null)
       return;
 
-    Map<Id, Id> callerByOpp = new Map<Id, Id>();
+    // every credited person (Presales Owner and SV User): each one's zone TV
+    // celebrates; a TV showing both de-duplicates by Opportunity Id
+    Map<Id, List<Id>> callersByOpp = new Map<Id, List<Id>>();
+    Set<Id> callerIds = new Set<Id>();
     for (Opportunity o : newList) {
       Opportunity old = oldMap == null ? null : oldMap.get(o.Id);
       if (!qualifies(o, def) || qualifies(old, def))
         continue;
-      Id caller = (Id) o.get(def.ownerField);
-      if (caller == null && String.isNotBlank(def.ownerFieldAlt))
-        caller = (Id) o.get(def.ownerFieldAlt);
-      if (caller != null)
-        callerByOpp.put(o.Id, caller);
+      List<Id> callers = GSquareSalesArenaWrapperWallTV_V2.creditedOwners(o, def);
+      if (!callers.isEmpty()) {
+        callersByOpp.put(o.Id, callers);
+        callerIds.addAll(callers);
+      }
     }
-    if (callerByOpp.isEmpty())
+    if (callersByOpp.isEmpty())
       return;
 
-    Set<Id> callerIds = new Set<Id>(callerByOpp.values());
     Map<Id, User> users = new Map<Id, User>(
       (List<User>) Database.query(
         'SELECT Id, Name, Manager.Name, ' +
@@ -74,32 +76,34 @@ public without sharing class GSquareArenaBookingEvents {
           ' FROM User WHERE Id IN :callerIds'
       )
     );
-    Map<Id, String> projects = projectNames(callerByOpp.keySet());
+    Map<Id, String> projects = projectNames(callersByOpp.keySet());
     Map<Id, String> photos = photoUrls(users.values());
 
     List<GSquare_Arena_Booking__e> events = new List<GSquare_Arena_Booking__e>();
-    for (Id oppId : callerByOpp.keySet()) {
-      User u = users.get(callerByOpp.get(oppId));
-      if (u == null)
-        continue;
-      events.add(
-        new GSquare_Arena_Booking__e(
-          Opportunity_Id__c = String.valueOf(oppId),
-          Caller_Id__c = String.valueOf(u.Id),
-          Caller_Name__c = u.Name,
-          Caller_Initials__c = GSquareSalesArenaServiceWallTV_V2.initialsOf(u.Name),
-          Photo_Url__c = photos.get(u.Id),
-          Tl_Name__c = u.Manager == null ? null : u.Manager.Name,
-          // seating groups ('Chennai;Coimbatore'), so each group's TV celebrates its own
-          Zone__c = String.join(
-            GSquareSalesArenaWrapperWallTV_V2.zoneGroupsOf(
-              (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE)
+    for (Id oppId : callersByOpp.keySet()) {
+      for (Id callerId : callersByOpp.get(oppId)) {
+        User u = users.get(callerId);
+        if (u == null)
+          continue;
+        events.add(
+          new GSquare_Arena_Booking__e(
+            Opportunity_Id__c = String.valueOf(oppId),
+            Caller_Id__c = String.valueOf(u.Id),
+            Caller_Name__c = u.Name,
+            Caller_Initials__c = GSquareSalesArenaServiceWallTV_V2.initialsOf(u.Name),
+            Photo_Url__c = photos.get(u.Id),
+            Tl_Name__c = u.Manager == null ? null : u.Manager.Name,
+            // seating groups ('Chennai;Coimbatore'), so each group's TV celebrates its own
+            Zone__c = String.join(
+              GSquareSalesArenaWrapperWallTV_V2.zoneGroupsOf(
+                (String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE)
+              ),
+              ';'
             ),
-            ';'
-          ),
-          Project__c = projects.get(oppId)
-        )
-      );
+            Project__c = projects.get(oppId)
+          )
+        );
+      }
     }
     if (events.isEmpty())
       return;

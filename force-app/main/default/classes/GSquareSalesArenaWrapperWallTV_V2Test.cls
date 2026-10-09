@@ -15,6 +15,8 @@ private class GSquareSalesArenaWrapperWallTV_V2Test {
             System.assert(String.isNotBlank(m.get(k).objectApi), k + ' has no object');
         }
         System.assertEquals('SV_User__c', m.get('booking').ownerFieldAlt);
+        System.assertEquals('CreatedDate', m.get('booking').dateField);
+        System.assertEquals(true, m.get('booking').creditBothOwners);
         System.assertEquals(GSquareSalesArenaWrapperWallTV_V2.HERO_METRIC_KEYS.size(), 3);
         for (String k : GSquareSalesArenaWrapperWallTV_V2.HERO_METRIC_KEYS) System.assert(m.containsKey(k), 'hero key ' + k);
     }
@@ -49,6 +51,32 @@ private class GSquareSalesArenaWrapperWallTV_V2Test {
             GSquareSalesArenaWrapperWallTV_V2.zonesOf('Chennai;Coimbatore'));
         System.assertEquals(new List<String>{ 'Ambur' }, GSquareSalesArenaWrapperWallTV_V2.zonesOf('Ambur'));
         System.assertEquals(0, GSquareSalesArenaWrapperWallTV_V2.zonesOf(null).size());
+    }
+
+    @IsTest
+    static void creditedOwnersBothOrFallback() {
+        GSquareSalesArenaWrapperWallTV_V2.MetricDef d = new GSquareSalesArenaWrapperWallTV_V2.MetricDef();
+        d.ownerField = 'Presales_Owner__c';
+        d.ownerFieldAlt = 'SV_User__c';
+        Id a = UserInfo.getUserId();
+        Id b = [SELECT Id FROM User WHERE Id != :a AND IsActive = true LIMIT 1].Id;
+        Opportunity both = new Opportunity();
+        both.put('Presales_Owner__c', a);
+        both.put('SV_User__c', b);
+        Opportunity svOnly = new Opportunity();
+        svOnly.put('SV_User__c', b);
+        Opportunity same = new Opportunity();
+        same.put('Presales_Owner__c', a);
+        same.put('SV_User__c', a);
+
+        d.creditBothOwners = false; // fallback: owner, else alternate
+        System.assertEquals(new List<Id>{ a }, GSquareSalesArenaWrapperWallTV_V2.creditedOwners(both, d));
+        System.assertEquals(new List<Id>{ b }, GSquareSalesArenaWrapperWallTV_V2.creditedOwners(svOnly, d));
+        d.creditBothOwners = true; // booking: both get credit, same person once
+        System.assertEquals(new List<Id>{ a, b }, GSquareSalesArenaWrapperWallTV_V2.creditedOwners(both, d));
+        System.assertEquals(new List<Id>{ b }, GSquareSalesArenaWrapperWallTV_V2.creditedOwners(svOnly, d));
+        System.assertEquals(new List<Id>{ a }, GSquareSalesArenaWrapperWallTV_V2.creditedOwners(same, d));
+        System.assertEquals(0, GSquareSalesArenaWrapperWallTV_V2.creditedOwners(new Opportunity(), d).size());
     }
 
     @IsTest

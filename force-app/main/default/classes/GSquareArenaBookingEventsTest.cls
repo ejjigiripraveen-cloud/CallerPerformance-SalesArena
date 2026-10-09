@@ -33,12 +33,12 @@ private class GSquareArenaBookingEventsTest {
     return [SELECT Id FROM User WHERE Alias = :alias LIMIT 1].Id;
   }
 
-  /** In-memory Opportunity; JSON lets us set roll-up/formula fields. */
+  /** In-memory Opportunity; JSON lets us set CreatedDate and roll-up fields. */
   private static Opportunity opp(
     String idSuffix,
     Decimal receipts,
     String stage,
-    Date bookingDate,
+    Date createdDay,
     Id presales,
     Id svUser
   ) {
@@ -49,14 +49,10 @@ private class GSquareArenaBookingEventsTest {
       'StageName' => stage,
       'Total_Receipts__c' => receipts,
       'Presales_Owner__c' => presales,
-      'SV_User__c' => svUser
+      'SV_User__c' => svUser,
+      // a booking is dated by when the Opportunity was created (noon IST)
+      'CreatedDate' => GSquareArenaBaselineJob.istToGmt(createdDay, 12, 0)
     };
-    m.put(
-      'Booking_Date__c',
-      GSquareArenaTestData.isDateTimeField('Opportunity', 'Booking_Date__c')
-        ? (Object) GSquareArenaBaselineJob.istToGmt(bookingDate, 12, 0)
-        : (Object) bookingDate
-    );
     return (Opportunity) JSON.deserialize(JSON.serialize(m), Opportunity.class);
   }
 
@@ -115,19 +111,37 @@ private class GSquareArenaBookingEventsTest {
       uid('arbc1'),
       null
     );
-    Opportunity after = opp(
-      '003',
-      90000,
-      'Booked',
-      today(),
-      uid('arbc1'),
-      null
+    // exactly 90,000 is not a booking: receipts must be MORE than 90,000
+    Opportunity atThreshold = opp('003', 90000, 'Booked', today(), uid('arbc1'), null);
+    GSquareArenaBookingEvents.publishNewBookings(
+      new List<Opportunity>{ atThreshold },
+      new Map<Id, Opportunity>{ before.Id => before }
     );
+    System.assertEquals(0, GSquareArenaBookingEvents.published.size());
+
+    Opportunity after = opp('003', 90001, 'Booked', today(), uid('arbc1'), null);
     GSquareArenaBookingEvents.publishNewBookings(
       new List<Opportunity>{ after },
       new Map<Id, Opportunity>{ before.Id => before }
     );
     System.assertEquals(1, GSquareArenaBookingEvents.published.size());
+  }
+
+  @IsTest
+  static void presalesOwnerAndSvUserBothCelebrate() {
+    GSquareArenaBookingEvents.publishNewBookings(
+      new List<Opportunity>{
+        opp('008', 95000, 'Booked', today(), uid('arbc1'), uid('arbsv'))
+      },
+      null
+    );
+    System.assertEquals(2, GSquareArenaBookingEvents.published.size(), 'one event per credited person');
+    Set<String> zones = new Set<String>();
+    for (GSquare_Arena_Booking__e e : GSquareArenaBookingEvents.published) {
+      System.assertEquals(GSquareArenaBookingEvents.published[0].Opportunity_Id__c, e.Opportunity_Id__c);
+      zones.add(e.Zone__c);
+    }
+    System.assertEquals(new Set<String>{ 'Chennai', 'Pune' }, zones, 'each person\'s zone TV celebrates');
   }
 
   @IsTest

@@ -25,6 +25,9 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
     private String zone;                                    // null = TV page not configured
     private Map<Id, String> photoRawByUser = new Map<Id, String>();
     private Map<Id, List<String>> zonesByUser = new Map<Id, List<String>>();   // every user's seating groups, for the race
+    // records counted per metric key, so a booking credited to two people is one in the zone total
+    private Map<String, Set<Id>> distinctToday = new Map<String, Set<Id>>();
+    private Map<String, Set<Id>> distinctMtd = new Map<String, Set<Id>>();
     private Map<String, Integer> tlTeamSizes = new Map<String, Integer>();
 
     /* ---------------------------------------------------------------------
@@ -357,15 +360,19 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
             ' WITH SECURITY_ENFORCED LIMIT 10000';
 
         try {
+            Map<String, Set<Id>> distinct = targetIsRange ? distinctMtd : distinctToday;
+            if (!distinct.containsKey(def.key)) distinct.put(def.key, new Set<Id>());
             for (SObject so : Database.query(soql)) {
-                // Fallback: primary owner if populated, else alternate. Never both.
-                Id ownerId = (Id) so.get(def.ownerField);
-                if (ownerId == null) ownerId = (Id) so.get(def.ownerFieldAlt);
-                if (ownerId == null || !peopleById.containsKey(ownerId)) continue;
-                if (targetIsRange) {
-                    peopleById.get(ownerId).addMtd(def.key, 1);
-                } else {
-                    peopleById.get(ownerId).add(def.key, 1);
+                // each credited person in this zone gets +1 (Presales Owner and SV User) ...
+                for (Id ownerId : GSquareSalesArenaWrapperWallTV_V2.creditedOwners(so, def)) {
+                    if (!peopleById.containsKey(ownerId)) continue;
+                    if (targetIsRange) {
+                        peopleById.get(ownerId).addMtd(def.key, 1);
+                    } else {
+                        peopleById.get(ownerId).add(def.key, 1);
+                    }
+                    // ... but the zone total counts the record once
+                    distinct.get(def.key).add((Id) so.get('Id'));
                 }
             }
         } catch (Exception e) {
@@ -622,6 +629,8 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
             if (d.isRate == true) continue;
             Decimal sum = 0;
             for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : dto.people) sum += p.metrics.get(d.key);
+            // shared credit (booking): count records, not people's credits
+            if (distinctToday.containsKey(d.key)) sum = distinctToday.get(d.key).size();
             dto.totals.put(d.key, sum);
         }
         // Derived rates from the same config. Each rate is isolated in its own
@@ -693,6 +702,7 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
                 if (!p.mtdMetrics.containsKey(k)) p.mtdMetrics.put(k, 0);
                 mtdSum += p.mtdMetrics.get(k);
             }
+            if (distinctMtd.containsKey(k)) mtdSum = distinctMtd.get(k).size();
             dto.mtdTotals.put(k, mtdSum);
         }
         dto.zoneRace    = zone == null ? new List<GSquareSalesArenaWrapperWallTV_V2.ZoneRaceEntry>() : zoneRace();
