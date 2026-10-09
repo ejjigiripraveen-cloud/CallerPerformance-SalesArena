@@ -163,6 +163,13 @@
 .tool-fit {
   min-width: 6cqh;
 }
+.tool-export {
+  margin-right: 0.6cqw;
+}
+.tool:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
 .zone-pick {
   display: flex;
   align-items: center;

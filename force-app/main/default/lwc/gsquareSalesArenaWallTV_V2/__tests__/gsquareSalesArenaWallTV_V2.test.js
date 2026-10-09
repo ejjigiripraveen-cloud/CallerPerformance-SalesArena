@@ -3,7 +3,13 @@ import GsquareSalesArena from "c/gsquareSalesArenaWallTV_V2";
 import getDashboard from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard";
 import { subscribe } from "lightning/empApi";
 import getZoneGroups from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getZoneGroups";
+import getMtdExport from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getMtdExport";
 
+jest.mock(
+  "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getMtdExport",
+  () => ({ default: jest.fn() }),
+  { virtual: true }
+);
 jest.mock(
   "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard",
   () => {
@@ -285,15 +291,41 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     const el = mount();
     getDashboard.emit(DATA);
     await flush();
-    expect(el.shadowRoot.querySelectorAll(".tools button")).toHaveLength(4);
+    expect(el.shadowRoot.querySelectorAll(".tools button")).toHaveLength(5); // export, -, %, +, full screen
     expect(el.shadowRoot.querySelectorAll("select")).toHaveLength(1);
+  });
+
+  it("Export MTD downloads a workbook for the chosen zone", async () => {
+    getMtdExport.mockResolvedValue({
+      zone: "Zone 1",
+      sheets: [{ name: "Booking", rows: [["Booking Reference Number"], ["BR-1"]] }]
+    });
+    const clicked = [];
+    const spy = jest
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function () {
+        clicked.push({ href: this.href, download: this.download });
+      });
+    const el = mount("Zone 1");
+    getDashboard.emit(DATA);
+    await flush();
+    el.shadowRoot
+      .querySelector('.tools button[aria-label="Export month to date"]')
+      .click();
+    await flush();
+    await flush();
+    expect(getMtdExport).toHaveBeenCalledWith({ zone: "Zone 1" });
+    expect(clicked).toHaveLength(1);
+    expect(clicked[0].download).toMatch(/^ArenaTV_MTD_Zone 1_.*\.xls$/);
+    expect(decodeURIComponent(clicked[0].href)).toContain("BR-1");
+    spy.mockRestore();
   });
 
   it("full screen covers the window with CSS and Esc leaves it", async () => {
     const el = mount();
     getDashboard.emit(DATA);
     await flush();
-    const expand = el.shadowRoot.querySelectorAll(".tools button")[3];
+    const expand = el.shadowRoot.querySelector('.tools button[aria-label="Full screen"]');
     expand.click();
     await flush();
     expect(el.shadowRoot.querySelector(".fit.expanded")).not.toBeNull();
@@ -306,7 +338,8 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     const el = mount();
     getDashboard.emit(DATA);
     await flush();
-    const [out, fit, zin] = el.shadowRoot.querySelectorAll(".tools button");
+    const btn = (label) => el.shadowRoot.querySelector(`.tools button[aria-label="${label}"]`);
+    const [out, fit, zin] = [btn("Zoom out"), btn("Fit to screen"), btn("Zoom in")];
     expect(fit.textContent).toBe("100%");
     zin.click();
     await flush();

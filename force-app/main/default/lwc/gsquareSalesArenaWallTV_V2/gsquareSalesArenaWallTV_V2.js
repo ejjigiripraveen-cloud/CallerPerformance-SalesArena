@@ -3,12 +3,14 @@ import { refreshApex } from "@salesforce/apex";
 import getDashboard from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getDashboard";
 import { subscribe, onError as onEmpError } from "lightning/empApi";
 import getZoneGroups from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getZoneGroups";
+import getMtdExport from "@salesforce/apex/GSquareSalesArenaControllerWallTV_V2.getMtdExport";
 import {
   istParts,
   typicalByNow,
   paceState,
   mtdState,
   buildPlaylist,
+  buildWorkbookXml,
   pageCount,
   pageIndexAt,
   pageRows,
@@ -32,6 +34,8 @@ const BOOKING_CHANNEL = "/event/GSquare_Arena_Booking__e";
 const ZONE_STORAGE_KEY = "gsquareArenaTv.zone";
 // matches GSquareSalesArenaWrapperWallTV_V2.ZONE_ALL: the whole company
 const ALL_ZONES = "Gsquare";
+// TEMPORARY validation aid: set false (or remove the button) once MTD is verified
+const SHOW_MTD_EXPORT = true;
 const ZOOM_STORAGE_KEY = "gsquareArenaTv.zoom";
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
@@ -188,6 +192,41 @@ export default class GsquareSalesArena extends LightningElement {
       return z >= ZOOM_MIN && z <= ZOOM_MAX ? z : 1;
     } catch (e) {
       return 1;
+    }
+  }
+
+  /* ------------------------------------------- MTD export (temporary) */
+
+  exporting = false;
+
+  get showMtdExport() {
+    return SHOW_MTD_EXPORT && Boolean(this.zoneParam);
+  }
+
+  get exportLabel() {
+    return this.exporting ? "Exporting…" : "⇩ Export MTD";
+  }
+
+  /** Downloads the month-to-date records behind the three tiles for the chosen zone. */
+  async exportMtd() {
+    if (this.exporting || !this.zoneParam) return;
+    this.exporting = true;
+    try {
+      const res = await getMtdExport({ zone: this.zoneParam });
+      const xml = buildWorkbookXml(res.sheets);
+      // Blob URLs are blocked by Lightning Web Security; a data: URI is the
+      // same workaround the Caller Performance tab's Export uses.
+      const a = document.createElement("a");
+      a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(xml);
+      const stamp = istParts(Date.now()).dateKey;
+      a.download = `ArenaTV_MTD_${res.zone || this.zoneParam}_${stamp}.xls`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      console.warn("[Sales Arena] MTD export failed", e);
+    } finally {
+      this.exporting = false;
     }
   }
 

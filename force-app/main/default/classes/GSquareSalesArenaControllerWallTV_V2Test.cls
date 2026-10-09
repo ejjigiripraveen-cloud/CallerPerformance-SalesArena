@@ -35,5 +35,11 @@ private class GSquareSalesArenaControllerWallTV_V2Test {
         } catch (AuraHandledException e) {
             System.assert(true);
         }
+        try {
+            GSquareSalesArenaControllerWallTV_V2.getMtdExport('Ambur');
+            System.assert(false, 'expected AuraHandledException');
+        } catch (AuraHandledException e) {
+            System.assert(true);
+        }
     }
 }

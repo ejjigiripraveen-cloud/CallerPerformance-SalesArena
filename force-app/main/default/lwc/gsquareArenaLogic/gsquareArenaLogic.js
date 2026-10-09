@@ -404,3 +404,52 @@ export class TakeoverQueue {
     return this.items.length;
   }
 }
+
+/* --------------------------------------------- MTD export (temporary) */
+
+const xmlEscape = (v) =>
+  String(v === null || v === undefined ? "" : v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+/**
+ * Excel 2003 XML workbook (opens in Excel as .xls), one worksheet per sheet;
+ * the first row of each sheet is a bold header. Same format as the Caller
+ * Performance tab's Export.
+ */
+export function buildWorkbookXml(sheets) {
+  const worksheets = (sheets || [])
+    .map((s) => {
+      const rows = (s.rows || [])
+        .map(
+          (r, i) =>
+            "<Row>" +
+            r
+              .map(
+                (c) =>
+                  `<Cell${i === 0 ? ' ss:StyleID="h"' : ""}><Data ss:Type="String">${xmlEscape(c)}</Data></Cell>`
+              )
+              .join("") +
+            "</Row>"
+        )
+        .join("");
+      // Excel sheet names: max 31 chars, no []:*?/\
+      const name = xmlEscape(
+        String(s.name || "Sheet")
+          .replace(/[[\]:*?/\\]/g, " ")
+          .slice(0, 31)
+      );
+      return `<Worksheet ss:Name="${name}"><Table>${rows}</Table></Worksheet>`;
+    })
+    .join("");
+  return (
+    '<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n' +
+    '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" ' +
+    'xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' +
+    '<Styles><Style ss:ID="h"><Font ss:Bold="1"/></Style></Styles>' +
+    worksheets +
+    "</Workbook>"
+  );
+}

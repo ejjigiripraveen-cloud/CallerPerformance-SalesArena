@@ -5,6 +5,8 @@
         <members>GSquareArenaBaselineJobTest</members>
         <members>GSquareArenaBookingEvents</members>
         <members>GSquareArenaBookingEventsTest</members>
+        <members>GSquareArenaMtdExport</members>
+        <members>GSquareArenaMtdExportTest</members>
         <members>GSquareArenaTestData</members>
         <members>GSquareSalesArenaControllerWallTV_V2</members>
         <members>GSquareSalesArenaControllerWallTV_V2Test</members>

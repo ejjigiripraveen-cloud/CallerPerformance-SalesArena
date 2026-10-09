@@ -65,6 +65,9 @@
     </template>
     <template lwc:if={showZonePicker}>
       <div class="tools">
+        <template lwc:if={showMtdExport}>
+          <button class="tool tool-export" title="Download this month's Allocation, SV Conducted and Booking records for the chosen zone" aria-label="Export month to date" onclick={exportMtd} disabled={exporting}>{exportLabel}</button>
+        </template>
         <button class="tool" title="Zoom out" aria-label="Zoom out" onclick={zoomOut}>&minus;</button>
         <button class="tool tool-fit" title="Fit to screen" aria-label="Fit to screen" onclick={zoomFit}>{zoomLabel}</button>
         <button class="tool" title="Zoom in" aria-label="Zoom in" onclick={zoomIn}>+</button>

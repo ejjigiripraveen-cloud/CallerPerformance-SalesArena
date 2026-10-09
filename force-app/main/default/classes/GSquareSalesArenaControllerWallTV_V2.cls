@@ -17,6 +17,19 @@ public without sharing class GSquareSalesArenaControllerWallTV_V2 {
         return GSquareSalesArenaWrapperWallTV_V2.zoneDropdown();
     }
 
+    /** TEMPORARY: month-to-date detail behind the tiles, for the Export MTD button. */
+    @AuraEnabled
+    public static GSquareArenaMtdExport.Result getMtdExport(String zone) {
+        try {
+            if (Test.isRunningTest() && forceFailure) throw new IllegalArgumentException('forced');
+            return GSquareArenaMtdExport.build(zone);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'GSquareSalesArenaControllerWallTV_V2.getMtdExport failed: '
+                + e.getMessage() + ' | ' + e.getStackTraceString());
+            throw new AuraHandledException('Export failed. Please try again.');
+        }
+    }
+
     @AuraEnabled(cacheable=true)
     /** @param zone the TV page's Zone__c value; blank returns zoneConfigured = false. */
     public static GSquareSalesArenaWrapperWallTV_V2.DashboardDTO getDashboard(String zone) {
