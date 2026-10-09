@@ -11,10 +11,10 @@ public without sharing class GSquareSalesArenaControllerWallTV_V2 {
 
     @TestVisible private static Boolean forceFailure = false;   // lets a test cover the error path
 
-    /** The zone dropdown: telecaller seating groups, in display order. */
+    /** The zone dropdown: Gsquare (everyone), then the telecaller seating groups. */
     @AuraEnabled(cacheable=true)
     public static List<String> getZoneGroups() {
-        return GSquareSalesArenaWrapperWallTV_V2.ZONE_GROUP_ORDER;
+        return GSquareSalesArenaWrapperWallTV_V2.zoneDropdown();
     }
 
     @AuraEnabled(cacheable=true)

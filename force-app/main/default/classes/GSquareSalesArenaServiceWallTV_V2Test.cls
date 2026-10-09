@@ -62,7 +62,27 @@ private class GSquareSalesArenaServiceWallTV_V2Test {
         System.assertEquals(1, race.get('Chennai'));
         System.assertEquals(1, race.get('Pune'));
 
-        System.assertEquals(2, dto.tlTeamSizes.get(String.valueOf(u('arstl').Id)), 'team size spans zones');
+        System.assertEquals(1, dto.tlTeamSizes.get(String.valueOf(u('arstl').Id)), 'team size counts only this zone');
+    }
+
+    @IsTest
+    static void gsquareShowsEveryZone() {
+        Date today = GSquareArenaBaselineJob.istToday();
+        insert new List<SObject>{
+            GSquareArenaTestData.conductedVisit(u('arsc1').Id, today, 10, 0),
+            GSquareArenaTestData.conductedVisit(u('arsc2').Id, today, 10, 0)
+        };
+        Test.startTest();
+        GSquareSalesArenaWrapperWallTV_V2.DashboardDTO dto = buildAs('Gsquare');
+        Test.stopTest();
+
+        System.assertEquals('Gsquare', dto.zone);
+        Set<Id> ids = new Set<Id>();
+        for (GSquareSalesArenaWrapperWallTV_V2.PersonDTO p : dto.people) ids.add(p.userId);
+        System.assert(ids.contains(u('arsc1').Id), 'Chennai caller present');
+        System.assert(ids.contains(u('arsc2').Id), 'Pune caller present');
+        System.assertEquals(2, dto.tlTeamSizes.get(String.valueOf(u('arstl').Id)), 'whole team counts on Gsquare');
+        System.assert(dto.totals.get('svConducted') >= 2, 'both zones counted');
     }
 
     @IsTest

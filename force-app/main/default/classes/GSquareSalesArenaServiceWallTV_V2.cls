@@ -78,8 +78,9 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
             ' FROM ' + GSquareSalesArenaWrapperWallTV_V2.OBJ_USER +
             ' WHERE ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ACTIVE + ' = true' +
             ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_PROFILE + ' IN :profiles' +
-            // INCLUDES: zone is a multi-select picklist; anyone seated in any zone of this group
-            ' AND '   + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE + ' INCLUDES (' + quotedList(GSquareSalesArenaWrapperWallTV_V2.zonesInGroup(zone)) + ')' +
+            // Gsquare = everyone; otherwise INCLUDES (multi-select) anyone seated in any zone of this group
+            (GSquareSalesArenaWrapperWallTV_V2.isAllZones(zone) ? '' :
+                ' AND ' + GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE + ' INCLUDES (' + quotedList(GSquareSalesArenaWrapperWallTV_V2.zonesInGroup(zone)) + ')') +
             ' WITH SECURITY_ENFORCED';
 
         // getUserProfilesInScope() (not the raw constant) so tests can override
@@ -493,8 +494,8 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
     }
 
     /* ---------------------------------------------------------------------
-     * ALL ZONES -- owner->zone for the race, and TL team sizes across zones
-     * so a TL shown on two zone TVs reads "6 of 11 callers".
+     * ALL ZONES -- owner->group for the race (every group, on every TV), and
+     * TL team sizes counted within the chosen zone only.
      * ------------------------------------------------------------------ */
     private void loadAllZoneUsers() {
         List<String> profiles = GSquareSalesArenaWrapperWallTV_V2.getUserProfilesInScope();
@@ -504,7 +505,9 @@ public without sharing class GSquareSalesArenaServiceWallTV_V2 {
             if (GSquareSalesArenaWrapperWallTV_V2.EXCLUDED_USER_NAMES.contains(u.Name)) continue;
             List<String> zs = GSquareSalesArenaWrapperWallTV_V2.zoneGroupsOf((String) u.get(GSquareSalesArenaWrapperWallTV_V2.USER_FLD_ZONE));
             if (!zs.isEmpty()) zonesByUser.put(u.Id, zs);
-            if (u.ManagerId != null) {
+            // team size counts only callers in the chosen zone, like everything else on the TV
+            Boolean inZone = GSquareSalesArenaWrapperWallTV_V2.isAllZones(zone) || zs.contains(zone);
+            if (inZone && u.ManagerId != null) {
                 String k = String.valueOf(u.ManagerId);
                 tlTeamSizes.put(k, (tlTeamSizes.containsKey(k) ? tlTeamSizes.get(k) : 0) + 1);
             }

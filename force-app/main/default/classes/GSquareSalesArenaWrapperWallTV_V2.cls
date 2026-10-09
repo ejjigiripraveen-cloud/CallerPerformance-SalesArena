@@ -90,10 +90,25 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
         return out;
     }
 
-    /** A TV's zone parameter as a group: a group name, or a raw zone preset on an older page. */
+    /** Dropdown option for the whole company: every zone, and users with no zone too. */
+    public static final String ZONE_ALL = 'Gsquare';
+
+    public static Boolean isAllZones(String zone) {
+        return zone == ZONE_ALL;
+    }
+
+    /** The zone dropdown: Gsquare first, then the seating groups. */
+    public static List<String> zoneDropdown() {
+        List<String> out = new List<String>{ ZONE_ALL };
+        out.addAll(ZONE_GROUP_ORDER);
+        return out;
+    }
+
+    /** A TV's zone parameter as a group: Gsquare, a group name, or a raw zone preset on an older page. */
     public static String resolveZoneGroup(String param) {
         if (String.isBlank(param)) return null;
         String p = param.trim();
+        if (p.equalsIgnoreCase(ZONE_ALL)) return ZONE_ALL;
         return ZONE_GROUPS.containsKey(p) ? p : zoneGroupOf(p);
     }
 

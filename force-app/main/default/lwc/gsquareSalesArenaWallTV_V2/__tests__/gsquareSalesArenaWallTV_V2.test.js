@@ -332,6 +332,45 @@ describe("c-gsquare-sales-arena-wall-t-v_-v2", () => {
     expect(text(el, ".ssub")).toBe("Today in Zone 1 · 1 TL");
   });
 
+  const booking = (zone) => ({
+    data: {
+      payload: {
+        Opportunity_Id__c: `006-${zone}`,
+        Caller_Id__c: "u9",
+        Caller_Name__c: "Other Caller",
+        Caller_Initials__c: "OC",
+        Zone__c: zone
+      }
+    }
+  });
+
+  it("celebrates only bookings from the chosen zone", async () => {
+    const el = mount("Zone 1");
+    getDashboard.emit(DATA);
+    await flush();
+    bookingHandler(booking("Zone 2"));
+    jest.advanceTimersByTime(1000);
+    await flush();
+    expect(el.shadowRoot.querySelector("c-gsquare-arena-takeover")).toBeNull();
+    bookingHandler(booking("Zone 2;Zone 1")); // multi-group caller
+    jest.advanceTimersByTime(1000);
+    await flush();
+    expect(
+      el.shadowRoot.querySelector("c-gsquare-arena-takeover").booking.callerName
+    ).toBe("Other Caller");
+  });
+
+  it("Gsquare celebrates bookings from every zone", async () => {
+    const el = mount("Gsquare");
+    getDashboard.emit({ ...DATA, zone: "Gsquare" });
+    await flush();
+    bookingHandler(booking("Zone 2"));
+    jest.advanceTimersByTime(1000);
+    await flush();
+    const tk = el.shadowRoot.querySelector("c-gsquare-arena-takeover");
+    expect(tk.booking.countText).toBe("Booking 2 today in Gsquare, 5 this month");
+  });
+
   describe("zone picker", () => {
     const zoneSelect = (el) =>
       el.shadowRoot.querySelector(".zone-pick-select");

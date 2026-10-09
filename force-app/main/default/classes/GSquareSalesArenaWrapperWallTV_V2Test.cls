@@ -66,6 +66,12 @@ private class GSquareSalesArenaWrapperWallTV_V2Test {
         System.assertEquals('Coimbatore', GSquareSalesArenaWrapperWallTV_V2.resolveZoneGroup('Coimbatore'));
         System.assertEquals('Coimbatore', GSquareSalesArenaWrapperWallTV_V2.resolveZoneGroup(' Hosur '));
         System.assertEquals(null, GSquareSalesArenaWrapperWallTV_V2.resolveZoneGroup(''));
+        // Gsquare = the whole company, first in the dropdown
+        System.assertEquals('Gsquare', GSquareSalesArenaWrapperWallTV_V2.resolveZoneGroup('gsquare'));
+        System.assert(GSquareSalesArenaWrapperWallTV_V2.isAllZones('Gsquare'));
+        System.assert(!GSquareSalesArenaWrapperWallTV_V2.isAllZones('Chennai'));
+        System.assertEquals('Gsquare', GSquareSalesArenaWrapperWallTV_V2.zoneDropdown()[0]);
+        System.assertEquals(5, GSquareSalesArenaWrapperWallTV_V2.zoneDropdown().size());
         System.assertEquals(2, GSquareSalesArenaWrapperWallTV_V2.zonesInGroup('Coimbatore').size());
         System.assertEquals(new List<String>{ 'Goa' }, GSquareSalesArenaWrapperWallTV_V2.zonesInGroup('Goa'));
         // every group in the dropdown has its zone list

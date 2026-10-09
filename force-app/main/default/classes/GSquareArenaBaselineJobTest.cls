@@ -134,6 +134,20 @@ private class GSquareArenaBaselineJobTest {
       ),
       'TL scope equals zone scope when every caller is in the zone'
     );
+    System.assertEquals(
+      valueFor(
+        GSquareArenaBaselineJob.hourlyKey(zoneScope, 'svConducted', weekday, 23)
+      ),
+      valueFor(
+        GSquareArenaBaselineJob.hourlyKey(
+          GSquareArenaBaselineJob.zoneScope('Gsquare'),
+          'svConducted',
+          weekday,
+          23
+        )
+      ),
+      'the Gsquare (all zones) baseline includes this zone'
+    );
   }
 
   @IsTest

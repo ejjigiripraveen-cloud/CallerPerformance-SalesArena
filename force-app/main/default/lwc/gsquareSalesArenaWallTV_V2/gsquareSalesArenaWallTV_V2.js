@@ -30,6 +30,8 @@ import {
 const BOOKING_CHANNEL = "/event/GSquare_Arena_Booking__e";
 // Each TV's browser remembers its zone across the daily 08:30 reload.
 const ZONE_STORAGE_KEY = "gsquareArenaTv.zone";
+// matches GSquareSalesArenaWrapperWallTV_V2.ZONE_ALL: the whole company
+const ALL_ZONES = "Gsquare";
 const ZOOM_STORAGE_KEY = "gsquareArenaTv.zoom";
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
@@ -377,25 +379,24 @@ export default class GsquareSalesArena extends LightningElement {
   }
 
   enqueueBooking(b) {
+    // Only this TV's zone celebrates (Gsquare celebrates every booking). The
+    // event's zone lists the caller's seating groups: "Chennai;Coimbatore".
+    const zones = (b.zone || "")
+      .split(";")
+      .map((z) => z.trim())
+      .filter(Boolean);
+    const ownZone =
+      this.zoneParam === ALL_ZONES || zones.includes(this.zoneParam);
+    if (!ownZone) return;
     if (!this.queue.push(b)) return;
     if (b.callerId)
       this.celebratedByCaller.set(
         b.callerId,
         (this.celebratedByCaller.get(b.callerId) || 0) + 1
       );
-    // User.Zone__c is multi-select: "Chennai;Coimbatore" belongs to both zones.
-    const zones = (b.zone || "")
-      .split(";")
-      .map((z) => z.trim())
-      .filter(Boolean);
-    const ownZone = zones.includes(this.zoneParam);
-    if (ownZone) {
-      this.zoneBookingsToday += 1;
-      this.zoneBookingsMtd += 1;
-    }
-    b.countText = ownZone
-      ? `Booking ${this.zoneBookingsToday} today in ${this.zoneParam}, ${this.zoneBookingsMtd} this month`
-      : `Booked in ${zones.join(", ") || "another zone"}`;
+    this.zoneBookingsToday += 1;
+    this.zoneBookingsMtd += 1;
+    b.countText = `Booking ${this.zoneBookingsToday} today in ${this.zoneParam}, ${this.zoneBookingsMtd} this month`;
   }
 
   /** Fallback when the event stream is down: a caller's booking count rose. */
