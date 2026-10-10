@@ -21,8 +21,9 @@
 }
 .row {
   display: grid;
-  /* minmax(0, …): a long name truncates with "…" instead of widening the board */
-  grid-template-columns: 4.5cqh 6.4cqh minmax(0, 1fr) auto 9cqh;
+  /* minmax(0, …): a long name truncates with "…" instead of widening the board;
+     the value column grows with the number (e.g. "1250m") instead of spilling out */
+  grid-template-columns: 4.5cqh 6.4cqh minmax(0, 1fr) auto minmax(9cqh, max-content);
   align-items: center;
   gap: 1.4cqh;
   background: var(--arena-panel);

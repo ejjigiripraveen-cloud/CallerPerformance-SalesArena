@@ -627,7 +627,7 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
         talktime.key           = 'talktime';
         talktime.label         = 'Talktime';
         talktime.icon          = 'call';
-        talktime.unit          = 'min';
+        talktime.unit          = 'm';          // short, so values fit the board's value column
         talktime.displayOrder  = 6;
         talktime.showInFunnel  = false;   // removed from KPI strip by design
         talktime.showInBoards  = true;
