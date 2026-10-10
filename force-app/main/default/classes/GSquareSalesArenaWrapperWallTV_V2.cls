@@ -241,7 +241,10 @@ public without sharing class GSquareSalesArenaWrapperWallTV_V2 {
         'Common Bucket User',
         'Land Acquistion',      // spelling as it exists in the org
         'Recovery_Presales_TN',
-        'Tech Support'
+        'Tech Support',
+        'Abandon (Callback Missed)', // holds missed-call leads; zone = every zone, so it topped every bottom board
+        'Dummy Manager 1',           // placeholder Presales Head in the user hierarchy
+        'Dummy Manager 2'            // placeholder Presales Head in the user hierarchy
     };
 
     /**

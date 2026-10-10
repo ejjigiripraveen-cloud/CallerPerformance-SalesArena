@@ -62,6 +62,13 @@ private class GSquareSalesArenaWrapperWallTV_V2Test {
     }
 
     @IsTest
+    static void placeholderUsersAreHidden() {
+        for (String n : new List<String>{ 'Abandon (Callback Missed)', 'Dummy Manager 1', 'Dummy Manager 2' }) {
+            System.assert(GSquareSalesArenaWrapperWallTV_V2.EXCLUDED_USER_NAMES.contains(n), n);
+        }
+    }
+
+    @IsTest
     static void creditedOwnersBothOrFallback() {
         GSquareSalesArenaWrapperWallTV_V2.MetricDef d = new GSquareSalesArenaWrapperWallTV_V2.MetricDef();
         d.ownerField = 'Presales_Owner__c';
