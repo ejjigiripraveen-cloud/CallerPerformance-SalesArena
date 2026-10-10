@@ -15,7 +15,7 @@ export default class GsquareArenaBoard extends LightningElement {
 
   get columns() {
     const views = (this.rows || []).map((r) => this.view(r));
-    if (this.isBottom) return [{ key: "c1", rows: views }];
+    // top and bottom boards both show up to 10, as two columns of 5
     return [
       { key: "c1", rows: views.slice(0, 5) },
       { key: "c2", rows: views.slice(5, 10) }

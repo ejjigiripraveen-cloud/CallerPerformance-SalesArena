@@ -2,6 +2,7 @@ import {
   isEligible,
   topRows,
   bottomRows,
+  BOTTOM_ROWS,
   teamRows,
   watchlistRows,
   applyMovement
@@ -76,7 +77,7 @@ describe("topRows", () => {
 });
 
 describe("bottomRows", () => {
-  it("only eligible people, lowest first, zero performers included, max 5", () => {
+  it("only eligible people, lowest first, zero performers included", () => {
     const people = [
       person("a", "Anu K", "T1", { allocation: 0 }),
       person("b", "Bala S", "T1", { allocation: 0 }, { availability: false }),
@@ -95,7 +96,8 @@ describe("bottomRows", () => {
       person("i", "Indu P", "T1", { allocation: 5 }),
       person("j", "Jaya T", "T1", { allocation: 6 })
     ];
-    const rows = bottomRows(people, "allocation");
+    // n = 5 keeps the original expectation; the TV default is BOTTOM_ROWS (10)
+    const rows = bottomRows(people, "allocation", 5);
     expect(rows.map((r) => r.name)).toEqual([
       "Anu K",
       "Deepa M",
@@ -104,6 +106,16 @@ describe("bottomRows", () => {
       "Indu P"
     ]);
     expect(rows[0]).toMatchObject({ rank: 1, value: 0 });
+  });
+
+  it("shows up to 10 by default", () => {
+    expect(BOTTOM_ROWS).toBe(10);
+    const many = Array.from({ length: 14 }, (_, i) =>
+      person(`p${i}`, `Caller ${String(i).padStart(2, "0")}`, "T1", { allocation: i })
+    );
+    const rows = bottomRows(many, "allocation");
+    expect(rows).toHaveLength(10);
+    expect(rows[9]).toMatchObject({ rank: 10, value: 9 });
   });
 });
 

@@ -49,13 +49,13 @@ describe("c-gsquare-arena-board", () => {
     expect(mv[2].textContent).toBe("");
   });
 
-  it("bottom board is one column and highlights zeros, with unit suffix", () => {
+  it("bottom board is two columns like top and highlights zeros, with unit suffix", () => {
     const el = mount({
       rows: [{ ...rows[0], value: 0, movement: null }],
       variant: "bottom",
       unit: "m"
     });
-    expect(el.shadowRoot.querySelectorAll(".col")).toHaveLength(1);
+    expect(el.shadowRoot.querySelectorAll(".col")).toHaveLength(2);
     const v = el.shadowRoot.querySelector(".val");
     expect(v.textContent).toBe("0m");
     expect(v.classList.contains("zero")).toBe(true);

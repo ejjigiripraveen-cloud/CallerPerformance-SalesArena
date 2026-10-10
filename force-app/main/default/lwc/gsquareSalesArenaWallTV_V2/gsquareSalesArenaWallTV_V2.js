@@ -20,6 +20,7 @@ import {
   watchlistRows,
   applyMovement,
   BOARD_METRICS,
+  BOTTOM_ROWS,
   staleState,
   updatedText,
   isAuthError,
@@ -632,7 +633,7 @@ export default class GsquareSalesArena extends LightningElement {
   get sceneSubtitle() {
     const s = this.scene;
     if (s.kind === "top") return "Top 10 today";
-    if (s.kind === "bottom") return "Bottom 5, available callers";
+    if (s.kind === "bottom") return `Bottom ${BOTTOM_ROWS}, available callers`;
     if (s.kind === "watchlist") {
       const n = ((this.data && this.data.settings) || {}).watchlistMinWeak || 3;
       return `Below the zone average on ${n} or more measures`;

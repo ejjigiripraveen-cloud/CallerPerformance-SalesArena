@@ -217,7 +217,10 @@ export function topRows(people, key, n = 10) {
     .map((p, i) => toRow(p, key, i + 1));
 }
 
-export function bottomRows(people, key, n = 5) {
+/** Rows on a bottom board (two columns of 5, like the Top 10 boards). */
+export const BOTTOM_ROWS = 10;
+
+export function bottomRows(people, key, n = BOTTOM_ROWS) {
   return people
     .filter(isEligible)
     .sort((a, b) => val(a, key) - val(b, key) || a.name.localeCompare(b.name))
